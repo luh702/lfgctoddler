@@ -4264,6 +4264,20 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function syncStart() {
     if (sync.booted) return;
     sync.booted = true;
+    // 진단용 — 앱은 이 값을 쓰지 않는다 (브라우저 콘솔에서 상태 확인)
+    try {
+      window.__lfgcSync = {
+        state: function () {
+          return {
+            started: sync.started, pulled: sync.pulled, status: sync.status,
+            error: sync.lastError, channel: !!sync.channel, pollTimer: !!sync.pollTimer,
+            revs: sync.revs, baseKeys: Object.keys(sync.base)
+          };
+        },
+        pull: function () { pullKeys(null, function () { render(); }); },
+        push: function () { pushChanges(); }
+      };
+    } catch (e) {}
     if (window.supabase && window.supabase.createClient) { syncConnect(); return; }
     // CDN이 아직이거나 막혔을 때 — 늦게라도 오면 연결한다
     window.__sbReady = function () { syncConnect(); };

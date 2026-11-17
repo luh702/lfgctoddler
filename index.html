@@ -29,6 +29,8 @@
    v1.0 — Supabase 실시간 공유 저장 (모든 기기·선생님이 같은 자료) · 오프라인은 기기 저장 후 자동 재전송
    v1.3 — 졸업 예정 생년월일 자동 계산 + 직접 지정(자동 복귀) · 새친구반 카드에서 원탭 반 배정
    v1.4 — 등록카드 사진으로 자동 입력(📷 Gemini 비전) · 졸업 예정자 카드 강조
+   v1.5 — 반 소개(한 줄 설명) 기본값 비움 · 반 입장 창은 '담당 선생님' 이름 순서
+          🎓 졸업 예정자 모아보기 · 손가락(안드로이드·아이폰) 드래그·수정 개선
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -229,7 +231,9 @@ h1,h2,h3,h4,p{margin:0}
 .mg-row .who b{display:block;font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mg-row .who small{display:block;font-size:10.5px;color:var(--muted);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mg-row .pin-chip{flex:0 0 auto;font-size:10px;font-weight:800;color:#7A6757;background:#F6F0E7;border-radius:999px;padding:3px 8px;letter-spacing:.5px}
-.mini-btn{flex:0 0 auto;font-size:10.5px;font-weight:800;color:var(--ink-soft);background:#FBF7F0;border:1px solid var(--line);border-radius:999px;padding:5px 9px}
+.mini-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:3px;min-height:36px;padding:7px 11px;font-size:11.5px;font-weight:800;color:var(--ink-soft);background:#FBF7F0;border:1px solid var(--line);border-radius:999px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.mini-btn:active{background:#F1E7D8}
+.mini-btn.icon{min-width:36px;padding:7px 8px;font-size:13px}
 .teacher-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .tchip{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:#FBF7F0;border:1px solid var(--line);font-size:10.5px;font-weight:800;color:var(--ink-soft)}
 .tchip button{font-size:10px;color:#B25A60;font-weight:800;padding:0 0 0 1px}
@@ -254,6 +258,10 @@ h1,h2,h3,h4,p{margin:0}
 .who-txt{flex:1;min-width:0}
 .who-txt b{display:block;font-size:14.5px;font-weight:800;letter-spacing:-.2px}
 .who-txt small{display:block;margin-top:2px;font-size:10.5px;color:var(--muted);font-weight:700;line-height:1.45}
+/* v1.5 — '담당 선생님' 라벨이 먼저, 그 아래에 선생님 이름 */
+.who-txt .wl{display:block;font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:-.1px}
+.who-txt .wn{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.2px;margin-top:2px;line-height:1.45;word-break:keep-all}
+.who-note{font-size:10.5px;font-weight:700;color:var(--muted);margin:-4px 2px 12px;line-height:1.5}
 /* 데모 PIN 안내 — 버튼 없이 한 줄로만 (한 번에 채우기 삭제) */
 .pin-demo{display:block;text-align:center;line-height:1.4}
 .pin-err{transition:opacity .12s}
@@ -458,6 +466,29 @@ h1,h2,h3,h4,p{margin:0}
 .bday-txt b{display:block;font-size:12.5px;font-weight:800;color:#9A6A35;letter-spacing:-.2px}
 .bday-txt small{display:block;font-size:11px;color:#B08957;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chev{color:#CBB18E;font-size:17px;font-weight:700}
+
+/* v1.5 — 🎓 졸업 예정자 모아보기 (이달의 생일 스트립과 같은 결) */
+.grad-card{border:1px solid #EBDCBF;border-radius:16px;background:linear-gradient(100deg,#FFF8EA,#FFFCF7);overflow:hidden}
+.grad-head{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;text-align:left}
+.grad-head .gh-ico{font-size:20px;flex:0 0 auto}
+.grad-head .gh-txt{flex:1;min-width:0}
+.grad-head .gh-txt b{display:block;font-size:12.5px;font-weight:800;color:#8A5A12;letter-spacing:-.2px}
+.grad-head .gh-txt small{display:block;font-size:11px;color:#B08957;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grad-card .chev{flex:0 0 auto;transition:transform .16s ease}
+.grad-card.open .chev{transform:rotate(90deg)}
+.grad-body{border-top:1px solid #F3E6D0;background:#FFFDF9;padding:2px 0}
+.grad-row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-bottom:1px solid #F7F0E4;text-align:left}
+.grad-row:last-child{border-bottom:0}
+.grad-row:active{background:#FFF7E9}
+.gr-cls{flex:0 0 auto;font-size:9.5px;font-weight:800;border-radius:999px;padding:3px 7px;letter-spacing:-.1px}
+.gr-main{flex:1;min-width:0}
+.gr-main b{display:block;font-size:13px;font-weight:800;letter-spacing:-.2px}
+.gr-main small{display:block;font-size:10.5px;color:var(--muted);font-weight:700;margin-top:1px}
+.grad-row .dday{flex:0 0 auto}
+.grad-sec{padding:8px 12px 6px;font-size:10px;font-weight:800;color:var(--muted);background:#FCF7EE;border-bottom:1px solid #F7F0E4;line-height:1.5}
+.grad-more{display:block;width:100%;padding:11px 12px;border-top:1px solid #F7F0E4;background:#FFFCF6;font-size:11px;font-weight:800;color:#9A7A45;text-align:center}
+.grad-more:active{background:#FFF6E7}
+.dday.past{background:#F5E6D2;color:#8A5A12}
 
 /* ---------------- 반 그룹 / 아이 목록 ---------------- */
 .group-head{display:flex;align-items:center;gap:7px;padding:6px 4px 1px;font-size:12px;font-weight:800;color:var(--ink-soft)}
@@ -674,35 +705,60 @@ h1,h2,h3,h4,p{margin:0}
   font-size:11px;font-weight:800;letter-spacing:-.1px;
 }
 .grad-reset:active{background:var(--bg-soft)}
-.move-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #F6F0E7}
+.move-row{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid #F6F0E7}
 .move-row:last-child{border-bottom:0}
 .move-row .nm{flex:1;min-width:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .move-row .nm small{color:var(--muted);font-weight:600;font-size:10.5px;margin-left:4px}
-.move-row .select{height:38px;flex:0 0 116px;font-size:12px}
+.move-row .select{height:38px;flex:0 0 106px;font-size:12px}
+/* v1.5 — 줄을 눌러도 수정 창이 열린다(손가락이 작은 버튼을 빗나가도 되게) */
+.tap-row{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.mg-row.tap-row:active,.move-row.tap-row:active{background:#FDF8F0}
 .admin-group{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
 .admin-group .ag-head{padding:8px 11px;background:#FCF9F3;border-bottom:1px solid #F3EBDF;font-size:11.5px;font-weight:800;color:var(--ink-soft);display:flex;gap:6px;align-items:center}
 .admin-group .ag-head span{margin-left:auto;color:var(--muted);font-weight:700}
-/* v1.1 — 관리자 드래그 이동 (Pointer Events · PC 마우스·손가락 공통) */
+/* v1.1 — 관리자 드래그 이동 (PC 마우스·펜 = Pointer Events / 손가락 = Touch Events)
+   v1.5 — 손가락으로 잡기 쉽게 44×44, 스크롤·고무줄·텍스트 선택을 막는 touch-action·user-select·callout */
 .drag-handle{
-  flex:0 0 auto;width:34px;height:40px;display:grid;place-items:center;
-  border:0;background:transparent;color:#C6B8AC;font-size:16px;line-height:1;
-  border-radius:10px;cursor:grab;touch-action:none;padding:0;margin:-4px 0;
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  flex:0 0 auto;width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid #ECE1D3;background:#FBF7F0;color:#A2937F;font-size:18px;line-height:1;
+  border-radius:12px;cursor:grab;padding:0;margin:0;
+  touch-action:none;-ms-touch-action:none;                /* 손가락 드래그 중 브라우저 스크롤을 맡기지 않는다 */
+  -webkit-user-select:none;user-select:none;              /* 길게 누를 때 텍스트 선택 방지 */
+  -webkit-touch-callout:none;                             /* iOS 길게 누르기 미리보기 방지 */
+  -webkit-tap-highlight-color:transparent;
 }
+.drag-handle.armed{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-dark)}
 .drag-handle:active{cursor:grabbing;background:#F3EBDF;color:#8A7868}
 .drag-handle:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
-body.dnd-on,body.dnd-on *{-webkit-user-select:none;user-select:none}
+body.dnd-on,body.dnd-on *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.dnd-on{touch-action:none;overscroll-behavior:none}   /* iOS 고무줄 스크롤 방지 */
 body.dnd-on .drag-handle{cursor:grabbing}
 .dnd-src{opacity:.4}
 .dnd-over{outline:2px dashed var(--primary);outline-offset:3px;background:var(--primary-soft)}
+/* 드래그 중 보이는 '놓을 반' 칩 바 — 화면 아래에 고정돼 손가락으로 정확히 누를 수 있다 */
+.dnd-targets{
+  position:fixed;left:50%;transform:translateX(-50%);z-index:99998;
+  bottom:calc(64px + env(safe-area-inset-bottom));width:calc(100% - 22px);max-width:458px;
+  padding:9px 10px 10px;border-radius:16px;border:1px solid #E3D6C7;background:rgba(255,253,249,.985);
+  box-shadow:0 16px 34px rgba(74,60,51,.26);
+}
+.dnd-targets .dt-label{font-size:10px;font-weight:800;color:var(--muted);margin:0 0 7px 2px;letter-spacing:-.1px}
+.dt-chips{display:flex;flex-wrap:wrap;gap:6px}
+.dt-chip{
+  flex:1 1 28%;min-height:42px;padding:8px 10px;border-radius:12px;border:1px solid #EFE3D4;background:#fff;
+  font-size:12.5px;font-weight:800;color:var(--ink-soft);letter-spacing:-.2px;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.dt-chip.dnd-over{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-dark);outline:0}
+body.dnd-on [data-drop-class].admin-class{border-color:#E3C9A9;box-shadow:0 0 0 2px #F6E7D2}
 .dnd-ghost{
   position:fixed;z-index:99999;pointer-events:none;transform:translate(-50%,-140%);
-  max-width:66vw;padding:7px 12px;border-radius:12px;
+  max-width:78vw;padding:7px 12px;border-radius:12px;
   background:#FFFDF9;border:1px solid #E3D6C7;box-shadow:0 10px 24px rgba(74,60,51,.22);
   font-size:12px;font-weight:800;color:#4A3C33;text-align:center;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.dnd-ghost small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);margin-top:1px;letter-spacing:-.1px}
+.dnd-ghost small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);margin-top:1px;letter-spacing:-.1px;white-space:normal;line-height:1.35}
 .danger-btn{
   width:100%;padding:13px;border-radius:14px;border:1px solid #F0D8DA;background:#FDF3F4;
   color:#B25A60;font-size:12.5px;font-weight:800;
@@ -871,7 +927,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.3';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.5';   // 화면에 보이는 시범용 버전
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
@@ -995,6 +1051,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     pWeek: null,               // 기도 탭 기준 주일
     memoOpen: null,            // childId
     rosterOpen: false,         // 담당 선생님 명단 펼침
+    gradOpen: true,            // v1.5 — 졸업 예정자 모아보기 펼침
+    gradPastOpen: false,       // v1.5 — 지난 졸업 대상까지 보기
     bMonth: null               // { y, m }
   };
 
@@ -1178,11 +1236,12 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     // v0.7 — 믿음 → 소망 → 사랑 → 은혜 → 새친구(맨 뒤)
     var classes = [
-      { id: 'faith', name: '믿음반', desc: '찬양과 율동으로 마음 여는 반', pin: CLASS_PINS.faith },
-      { id: 'hope',  name: '소망반', desc: '말씀 이야기로 배우는 반', pin: CLASS_PINS.hope },
-      { id: 'love',  name: '사랑반', desc: '친구와 기도로 마음 나누는 반', pin: CLASS_PINS.love },
-      { id: 'grace', name: '은혜반', desc: '예배 순서에 익숙해지는 반', pin: CLASS_PINS.grace },
-      { id: 'newkids', name: '새친구반', desc: '처음 온 친구가 적응하는 반', pin: CLASS_PINS.newkids }
+      // v1.5 — 반 이름 옆 한 줄 소개는 쓰지 않는다(기본값 빈 문자열). 관리 탭에서 원하면 넣을 수 있다.
+      { id: 'faith', name: '믿음반', desc: '', pin: CLASS_PINS.faith },
+      { id: 'hope',  name: '소망반', desc: '', pin: CLASS_PINS.hope },
+      { id: 'love',  name: '사랑반', desc: '', pin: CLASS_PINS.love },
+      { id: 'grace', name: '은혜반', desc: '', pin: CLASS_PINS.grace },
+      { id: 'newkids', name: '새친구반', desc: '', pin: CLASS_PINS.newkids }
     ];
 
     var admins = ADMIN_SEEDS.map(function (a) {
@@ -1575,7 +1634,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     src.attendance = src.attendance || {};
 
     if (!classIdExists(src.classes, NEW_FRIEND_CLASS)) {
-      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반', desc: '처음 온 친구가 적응하는 반' });
+      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반', desc: '' });
     } else {
       src.classes.forEach(function (c) {
         if (c.id !== NEW_FRIEND_CLASS) return;
@@ -1894,6 +1953,55 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       ' 유아부 졸업(초등 9월 입학) 예정">' + text + '</span>';
   }
 
+  /* ---------- v1.5 — 🎓 졸업 예정자 모아보기 ---------- */
+  // 졸업 예정(D-365~D-0)과 이미 지난 졸업 대상자를 한 목록으로 — 예정은 가까운 날짜부터, 지난 아이는 최근부터
+  function gradKids() {
+    return data.children.filter(function (c) {
+      return c.birth && gradHighlight(c) !== '';
+    }).sort(function (a, b) {
+      var da = gradDays(a), db = gradDays(b);
+      if ((da < 0) !== (db < 0)) return da < 0 ? 1 : -1;
+      return da < 0 ? db - da : da - db;
+    });
+  }
+  function gradStripHtml() {
+    var ks = gradKids();
+    if (!ks.length) return '';
+    var dueKs = ks.filter(function (k) { return gradDays(k) >= 0; });
+    var pastKs = ks.filter(function (k) { return gradDays(k) < 0; });
+    var open = ui.gradOpen !== false;
+    var sub = [];
+    if (dueKs.length) sub.push('1년 안에 ' + dueKs.length + '명');
+    if (pastKs.length) sub.push('지난 졸업 대상 ' + pastKs.length + '명');
+    function rowHtml(k) {
+      var d = gradDays(k);
+      var meta = classMeta(k.classId);
+      var dcls = d < 0 ? ' past' : d === 0 ? ' today' : d <= 90 ? ' soon' : '';
+      return '<button type="button" class="grad-row" data-action="child-info" data-child="' + k.id + '">' +
+        '<span class="gr-cls" style="background:' + meta.soft + ';color:' + meta.color + '">' + esc(className(k.classId)) + '</span>' +
+        '<span class="gr-main"><b>' + esc(k.name) + '</b>' +
+          '<small>' + esc(fmtDot(k.birth)) + '생 · 졸업 ' + esc(fmtDot(graduationOf(k))) + (isManualGrad(k) ? ' (직접 지정)' : '') + '</small></span>' +
+        '<span class="dday' + dcls + '">' + (d < 0 ? '🎓 졸업' : gradShortText(d)) + '</span>' +
+      '</button>';
+    }
+    var rows = dueKs.map(rowHtml).join('');
+    if (pastKs.length) {
+      rows += ui.gradPastOpen
+        ? '<div class="grad-sec">지난 졸업 대상 ' + pastKs.length + '명 · 명단에서 빼거나 다음 반으로 보낼 때 참고하세요</div>' + pastKs.map(rowHtml).join('')
+        : '<button type="button" class="grad-more" data-action="grad-past">지난 졸업 대상 ' + pastKs.length + '명 보기 ›</button>';
+    }
+    var title = dueKs.length ? '졸업 예정자 ' + dueKs.length + '명' : '지난 졸업 대상 ' + pastKs.length + '명';
+    return '<div class="grad-card' + (open ? ' open' : '') + '">' +
+      '<button type="button" class="grad-head" data-action="grad-toggle" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        '<span class="gh-ico">🎓</span>' +
+        '<span class="gh-txt"><b>' + title + '</b><small>' +
+          esc(sub.join(' · ')) + ' · 눌러서 아이 정보 보기</small></span>' +
+        '<span class="chev">›</span>' +
+      '</button>' +
+      (open ? '<div class="grad-body">' + rows + '</div>' : '') +
+    '</div>';
+  }
+
   /* ---------- v1.3 — 반 배정 (새친구반 → 정규 반) ---------- */
   // 정규 반 목록 — 새친구반은 '배정 대상'이 아니라 '기다리는 곳'이다
   function regularClasses() {
@@ -2140,9 +2248,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       '</div>' +
       '<div class="who-card">' +
         '<span class="cc-emoji" style="background:' + meta.soft + ';color:' + meta.color + '">' + meta.emoji + '</span>' +
-        '<div class="who-txt"><b>' + names + '</b><small>' +
-          (ts.length ? '담당 선생님 명단 · 누가 입장해도 같은 반으로 기록돼요' : '관리 탭에서 선생님을 배정할 수 있어요') +
-        '</small></div>' +
+        '<div class="who-txt"><span class="wl">👩‍🏫 담당 선생님</span><b class="wn">' + names + '</b></div>' +
+      '</div>' +
+      '<div class="who-note">' +
+        (ts.length ? '누가 입장해도 같은 반으로 기록돼요' : '아직 담당 선생님이 없어요 · 관리 탭에서 배정할 수 있어요') +
       '</div>' +
       '<div class="readonly-note" style="margin-top:0"><span>🍎</span><span>출석·메모·유의사항·기도제목을 고칠 수 있어요. 다른 반은 <b>보기만</b> 됩니다.</span></div>' +
       '<div class="modal-actions">' +
@@ -2168,7 +2277,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function pinTargetSub() {
     if (!pinState) return '';
     if (pinState.kind === 'admin') return '임원 · 교역자 · 모든 반 관리';
-    return teacherNamesText(pinState.id, ' · ');
+    return '담당 선생님 · ' + teacherNamesText(pinState.id, ' · ');
   }
   function pinTargetEmoji() {
     if (!pinState) return '🐣';
@@ -2432,7 +2541,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<button class="add-btn" data-action="new-friend">+ 새친구 등록</button>'
       : '';
 
-    return dateBar + chips + summary + rosterHtml(t, cls) + readOnly + bStrip +
+    return dateBar + chips + summary + rosterHtml(t, cls) + readOnly + bStrip + gradStripHtml() +
       '<div class="section-title">출석 명단 <small>' + esc(fmtLong(dateKey)) + ' ' + fmtWk(dateKey) + '</small></div>' +
       list + addBtn;
   }
@@ -2822,11 +2931,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     var teacherRows = sorted.length ? sorted.map(function (x) {
       var where = (x.classIds || []).length ? (x.classIds || []).map(className).join(' · ') : '미배정';
-      return '<div class="mg-row">' +
-        '<button type="button" class="drag-handle" data-drag="teacher" data-id="' + x.id + '" aria-label="' + esc(x.name) + ' 선생님 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
+      return '<div class="mg-row tap-row" data-action="teacher-edit" data-teacher="' + x.id + '">' +
+        '<button type="button" class="drag-handle" data-drag="teacher" data-id="' + x.id + '" data-action="noop" aria-label="' + esc(x.name) + ' 선생님 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
         '<span class="avatar sm" style="background:var(--bg-soft);color:var(--ink-soft)">' + esc(x.name.charAt(0)) + '</span>' +
         '<span class="who"><b>' + esc(x.name) + '</b><small>' + esc(where) + (x.phone ? ' · ' + esc(x.phone) : '') + '</small></span>' +
-        '<button class="mini-btn" data-action="teacher-edit" data-teacher="' + x.id + '">수정</button>' +
+        '<button class="mini-btn" data-action="teacher-edit" data-teacher="' + x.id + '">✏️ 수정</button>' +
         '<button class="mini-btn del" data-action="teacher-del" data-id="' + x.id + '">삭제</button>' +
       '</div>';
     }).join('') : '<div class="empty" style="padding:16px">아직 등록된 선생님이 없어요.</div>';
@@ -2848,7 +2957,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<div class="form-error" id="taError" hidden></div>' +
         '</form>' +
         '<div class="field-hint" style="margin:0">이름과 담당 반을 고르고 <b>추가</b>를 누르면 명단에 바로 들어가요. 관두신 선생님은 <b>삭제</b>로 빼면 돼요.</div>' +
-        '<div class="field-hint" style="margin:0">⠿ 손잡이를 끌어 <b>반 관리의 반 카드</b>에 놓으면 그 반 담당으로 바로 바뀌어요 (PC·터치 모두).</div>' +
+        '<div class="field-hint" style="margin:0">⠿ 손잡이를 끌어 <b>반 관리의 반 카드</b>나 끌 때 화면 아래 뜨는 <b>반 이름 칩</b>에 놓으면 그 반 담당으로 바로 바뀌어요 (PC 마우스·핸드폰·아이폰 모두).</div>' +
       '</div>' +
       '<div class="mg-list">' + teacherRows + '</div>' +
       '<div class="data-note" style="padding:0 4px">선생님이 15명이어도 로그인 화면에는 반 카드 5개만 보입니다. 선생님은 이름 대신 <b>반으로 입장</b>하고, 명단은 출석 화면의 <b>담당 선생님 명단</b>에서 모두 볼 수 있어요.</div>';
@@ -2909,8 +3018,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         var opts2 = data.classes.map(function (x) {
           return '<option value="' + x.id + '"' + (x.id === k.classId ? ' selected' : '') + '>' + esc(x.name) + '</option>';
         }).join('');
-        return '<div class="move-row">' +
-          '<button type="button" class="drag-handle" data-drag="child" data-id="' + k.id + '" aria-label="' + esc(k.name) + ' 어린이 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
+        return '<div class="move-row tap-row" data-action="child-info" data-child="' + k.id + '">' +
+          '<button type="button" class="drag-handle" data-drag="child" data-id="' + k.id + '" data-action="noop" aria-label="' + esc(k.name) + ' 어린이 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
           avatarButtonHtml(k, 'sm', '사진과 정보 열기', true) +
           '<div class="nm">' + esc(k.name) + '<small>' + ageText(monthsBetween(k.birth, todayISO())) + '</small></div>' +
           '<select class="select" data-action="move-child" data-child="' + k.id + '" aria-label="' + esc(k.name) + ' 반 이동">' + opts2 + '</select>' +
@@ -2924,7 +3033,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return teachersBlock +
       classBlock +
       '<div class="section-title">아이 반 이동 <small>끌어서 옮기거나 반을 고르세요</small></div>' +
-      '<div class="data-note" style="padding:0 4px 2px">⠿ <b>손잡이를 끌어 다른 반에 놓으면</b> 그 반으로 바로 옮겨지고 서버에도 바로 저장돼요 (PC 마우스·핸드폰 터치 공통). 아래 반 선택으로 옮겨도 같은 기록이 돼요.</div>' +
+      '<div class="data-note" style="padding:0 4px 2px">⠿ <b>손잡이를 끌어 다른 반에 놓으면</b> 그 반으로 바로 옮겨지고 서버에도 바로 저장돼요 (PC 마우스·안드로이드·아이폰 공통). 끌면 화면 아래에 <b>반 이름 칩</b>이 떠서 반 카드까지 안 내려가도 그 칩에 놓으면 돼요. 아래 반 선택으로 옮겨도 같은 기록이 돼요.</div>' +
       '<div class="data-note" style="padding:0 4px 2px">🐣 <b>새친구반</b>은 새로 온 친구가 적응하는 반이에요. 적응이 끝나면 아래 목록에서 반을 골라 주세요. 아이를 명단에서 빼려면 동그란 사진을 눌러 정보 창에서 <b>아이 삭제</b>를 누르면 돼요.</div>' +
       moveGroups +
       adminBlock +
@@ -3953,17 +4062,29 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     });
   }
 
-  /* ---------- v1.1 — 아이·선생님 끌어서 반 이동 (Pointer Events: PC 마우스 + 손가락) ---------- */
-  var dnd = { on: false, kind: null, id: null, handle: null, row: null, ghost: null, over: null, pid: null, sx: 0, sy: 0, label: '', sub: '' };
+  /* ---------- v1.1 / v1.5 — 아이·선생님 끌어서 반 이동 ----------
+     · PC(마우스·펜)           : Pointer Events
+     · 손가락(안드로이드·아이폰): Touch Events — touchmove 에서 직접 preventDefault 해
+       페이지 스크롤·iOS 고무줄 스크롤·길게 누르기 선택에 이벤트를 빼앗기지 않는다.
+     · 두 경로는 같은 dnd 상태를 쓰고, 포인터 경로는 pointerType==='touch' 를 무시해
+       한 번의 손가락 동작이 두 번 처리되지 않는다. */
+  var DND_MOVE = 6;            // 이만큼 움직이면 '끌기'로 본다(그 전엔 그냥 탭)
+  var dnd = {
+    mode: '', on: false, kind: null, id: null, handle: null, row: null,
+    ghost: null, bar: null, over: null, pid: null,
+    sx: 0, sy: 0, lx: 0, ly: 0, label: '', sub: '', raf: 0, blockClickUntil: 0
+  };
 
-  // 떨어뜨릴 수 있는 곳인가 — 선생님은 '반 관리'의 반 카드, 아이는 반 카드와 반별 명단 그룹 모두
+  // 떨어뜨릴 수 있는 곳인가 — 선생님은 '반 관리'의 반 카드와 아래 '놓을 반' 칩, 아이는 그 밖에 반별 명단 그룹도
   function dndAllowed(el) {
     if (!el || !el.getAttribute || !el.getAttribute('data-drop-class')) return false;
+    if (el.classList.contains('dt-chip')) return true;
     if (dnd.kind === 'teacher') return el.classList.contains('admin-class');
     return true;
   }
 
   function dndZoneAt(x, y) {
+    if (typeof x !== 'number' || typeof y !== 'number') return null;
     var el = document.elementFromPoint(x, y);
     while (el && el !== document.body) {
       if (el.getAttribute && el.getAttribute('data-drop-class')) return dndAllowed(el) ? el : null;
@@ -3972,93 +4093,193 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return null;
   }
 
-  function dndStart(e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    var handle = (e.target && e.target.closest) ? e.target.closest('[data-drag]') : null;
-    if (!handle) return;
+  // 누르기 시작한 곳이 손잡이(⠿)인지 확인하고, 끌 대상 정보를 잡아 둔다 (아직 끌기는 아님)
+  function dndPrepare(e) {
+    var target = e.target;
+    var handle = (target && target.closest) ? target.closest('[data-drag]') : null;
+    if (!handle) return false;
     var t = currentTeacher();
-    if (!t || t.role !== 'admin') return;
+    if (!t || t.role !== 'admin') return false;      // 관리자(임원)만 반 이동
     var kind = handle.getAttribute('data-drag');
     var id = handle.getAttribute('data-id');
-    if (!kind || !id) return;
+    if (!kind || !id) return false;
+    var label, sub;
     if (kind === 'child') {
       var k = childById(id);
-      if (!k) return;
-      dnd.label = k.name;
-      dnd.sub = '다른 반에 놓으면 바로 이동';
+      if (!k) return false;
+      label = k.name; sub = '다른 반에 놓으면 이동';
     } else {
       var tr = teacherById(id);
-      if (!tr) return;
-      dnd.label = tr.name + ' 선생님';
-      dnd.sub = '반 카드에 놓으면 담당 반 변경';
+      if (!tr) return false;
+      label = tr.name + ' 선생님'; sub = '반 카드나 반 이름 칩에 놓기';
     }
+    dndCleanup();
     dnd.kind = kind; dnd.id = id; dnd.handle = handle;
     dnd.row = handle.closest('.move-row') || handle.closest('.mg-row');
-    dnd.sx = e.clientX; dnd.sy = e.clientY; dnd.pid = e.pointerId; dnd.on = false;
-    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
-    handle.addEventListener('pointermove', dndMove);
-    handle.addEventListener('pointerup', dndEnd);
-    handle.addEventListener('pointercancel', dndCancel);
+    dnd.label = label; dnd.sub = sub; dnd.on = false;
+    handle.classList.add('armed');
+    return true;
   }
 
-  function dndMove(e) {
-    if (dnd.pid !== e.pointerId || !dnd.handle) return;
-    var dx = e.clientX - dnd.sx, dy = e.clientY - dnd.sy;
-    if (!dnd.on) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;   // 손가락이 조금 움직이기 전엔 그냥 누름
-      dnd.on = true;
-      document.body.classList.add('dnd-on');
-      if (dnd.row) dnd.row.classList.add('dnd-src');
-      dnd.ghost = document.createElement('div');
-      dnd.ghost.className = 'dnd-ghost';
-      dnd.ghost.innerHTML = esc(dnd.label) + '<small>' + esc(dnd.sub) + '</small>';
-      document.body.appendChild(dnd.ghost);
+  // 끌기 시작 — 손가락(또는 마우스)이 화면에서 움직였다
+  function dndBegin(x, y) {
+    dnd.on = true;
+    document.body.classList.add('dnd-on');
+    if (dnd.row) dnd.row.classList.add('dnd-src');
+    dnd.ghost = document.createElement('div');
+    dnd.ghost.className = 'dnd-ghost';
+    dnd.ghost.innerHTML = esc(dnd.label) + '<small>' + esc(dnd.sub) + '</small>';
+    document.body.appendChild(dnd.ghost);
+    dndBuildTargets();
+    dndUpdate(x, y);
+    dndAutoScroll();
+  }
+
+  // 화면 아래에 '놓을 반' 칩을 띄운다 — 반 카드가 화면 밖에 있어도 손가락으로 바로 놓을 수 있다
+  function dndBuildTargets() {
+    if (dnd.bar) return;
+    var bar = document.createElement('div');
+    bar.className = 'dnd-targets';
+    bar.innerHTML =
+      '<div class="dt-label">📚 ' + (dnd.kind === 'teacher' ? '이 선생님의 담당 반으로 놓기' : '옮길 반을 눌러 주세요') + '</div>' +
+      '<div class="dt-chips">' + data.classes.map(function (c) {
+        return '<button type="button" class="dt-chip" data-drop-class="' + c.id + '">' + esc(c.name) + '</button>';
+      }).join('') + '</div>';
+    document.body.appendChild(bar);
+    dnd.bar = bar;
+  }
+
+  function dndUpdate(x, y) {
+    dnd.lx = x; dnd.ly = y;
+    if (dnd.ghost) {
+      var w = dnd.ghost.offsetWidth || 120, h = dnd.ghost.offsetHeight || 40;
+      var gx = Math.max(w / 2 + 6, Math.min(window.innerWidth - w / 2 - 6, x));
+      var gy = Math.max(h + 18, Math.min(window.innerHeight - 8, y));
+      dnd.ghost.style.left = gx + 'px';
+      dnd.ghost.style.top = gy + 'px';
     }
-    e.preventDefault();
-    dnd.ghost.style.left = e.clientX + 'px';
-    dnd.ghost.style.top = e.clientY + 'px';
-    var zone = dndZoneAt(e.clientX, e.clientY);
+    var zone = dndZoneAt(x, y);
     if (zone !== dnd.over) {
       if (dnd.over) dnd.over.classList.remove('dnd-over');
       dnd.over = zone;
       if (zone) zone.classList.add('dnd-over');
     }
-    // 화면 가장자리에서 자동 스크롤 — 목록이 길어도 손가락으로 끌고 넘길 수 있게
-    var edge = 72;
-    if (e.clientY < edge) window.scrollBy(0, -14);
-    else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
   }
 
-  function dndEnd(e) {
-    if (dnd.pid !== e.pointerId) return;
-    var wasOn = dnd.on;
-    var zone = wasOn ? dndZoneAt(e.clientX, e.clientY) : null;
+  // 화면 가장자리에서 계속 스크롤 — 손가락을 멈춰 있어도 목록이 흘러간다
+  function dndAutoScroll() {
+    if (!dnd.on) return;
+    var vh = window.innerHeight, edge = 84, dy = 0;
+    var overChip = !!(dnd.over && dnd.over.classList.contains('dt-chip'));
+    if (!overChip) {
+      if (dnd.ly < edge) dy = -Math.min(18, 5 + (edge - dnd.ly) / 4);
+      else if (dnd.ly > vh - edge) dy = Math.min(18, 5 + (dnd.ly - (vh - edge)) / 4);
+    }
+    if (dy) {
+      var before = window.scrollY;
+      window.scrollBy(0, dy);
+      if (window.scrollY !== before) dndUpdate(dnd.lx, dnd.ly);
+    }
+    dnd.raf = requestAnimationFrame(dndAutoScroll);
+  }
+
+  function dndFinish(x, y) {
+    var kind = dnd.kind, id = dnd.id, wasOn = dnd.on;
+    var zone = wasOn ? dndZoneAt(x, y) : null;
     var classId = zone ? zone.getAttribute('data-drop-class') : null;
-    var kind = dnd.kind, id = dnd.id;
     dndCleanup();
-    if (!wasOn || !classId) return;
+    if (!wasOn) return;
+    dnd.blockClickUntil = Date.now() + 350;   // 손을 떼며 만들어지는 클릭이 수정 창을 열지 않게
+    if (!classId) { toast('반 이름 위에 놓으면 그 반으로 옮겨져요'); return; }
     if (kind === 'child') moveChild(id, classId);
     else moveTeacher(id, classId);
   }
 
-  function dndCancel(e) {
-    if (dnd.pid !== e.pointerId) return;
-    dndCleanup();
-  }
-
   function dndCleanup() {
+    if (dnd.raf) { try { cancelAnimationFrame(dnd.raf); } catch (e) {} dnd.raf = 0; }
     if (dnd.handle) {
-      try { dnd.handle.releasePointerCapture(dnd.pid); } catch (err) {}
-      dnd.handle.removeEventListener('pointermove', dndMove);
-      dnd.handle.removeEventListener('pointerup', dndEnd);
-      dnd.handle.removeEventListener('pointercancel', dndCancel);
+      try { if (dnd.pid != null) dnd.handle.releasePointerCapture(dnd.pid); } catch (e) {}
+      dnd.handle.removeEventListener('pointermove', dndPointerMove);
+      dnd.handle.removeEventListener('pointerup', dndPointerUp);
+      dnd.handle.removeEventListener('pointercancel', dndPointerCancel);
+      dnd.handle.classList.remove('armed');
     }
     if (dnd.ghost && dnd.ghost.parentNode) dnd.ghost.parentNode.removeChild(dnd.ghost);
+    if (dnd.bar && dnd.bar.parentNode) dnd.bar.parentNode.removeChild(dnd.bar);
     if (dnd.over) dnd.over.classList.remove('dnd-over');
     if (dnd.row) dnd.row.classList.remove('dnd-src');
     document.body.classList.remove('dnd-on');
-    dnd.on = false; dnd.handle = null; dnd.row = null; dnd.ghost = null;
-    dnd.over = null; dnd.pid = null; dnd.kind = null; dnd.id = null;
+    dnd.on = false; dnd.mode = ''; dnd.handle = null; dnd.row = null; dnd.ghost = null;
+    dnd.bar = null; dnd.over = null; dnd.pid = null; dnd.kind = null; dnd.id = null;
+  }
+
+  /* ---- PC: Pointer Events (마우스·펜). 손가락(pointerType==='touch')은 아래 터치 경로가 맡는다 ---- */
+  function dndPointerDown(e) {
+    if (e.pointerType === 'touch') return;                 // 중복 처리 방지
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!dndPrepare(e)) return;
+    dnd.mode = 'pointer'; dnd.pid = e.pointerId;
+    dnd.sx = e.clientX; dnd.sy = e.clientY; dnd.lx = e.clientX; dnd.ly = e.clientY;
+    try { dnd.handle.setPointerCapture(e.pointerId); } catch (err) {}
+    dnd.handle.addEventListener('pointermove', dndPointerMove);
+    dnd.handle.addEventListener('pointerup', dndPointerUp);
+    dnd.handle.addEventListener('pointercancel', dndPointerCancel);
+  }
+  function dndPointerMove(e) {
+    if (dnd.mode !== 'pointer' || dnd.pid !== e.pointerId || !dnd.handle) return;
+    if (!dnd.on) {
+      var dx = e.clientX - dnd.sx, dy = e.clientY - dnd.sy;
+      if (Math.abs(dx) < DND_MOVE && Math.abs(dy) < DND_MOVE) return;
+      dndBegin(e.clientX, e.clientY);
+    }
+    if (e.cancelable) e.preventDefault();
+    dndUpdate(e.clientX, e.clientY);
+  }
+  function dndPointerUp(e) {
+    if (dnd.mode !== 'pointer' || dnd.pid !== e.pointerId) return;
+    dndFinish(e.clientX, e.clientY);
+  }
+  function dndPointerCancel(e) {
+    if (dnd.mode !== 'pointer' || dnd.pid !== e.pointerId) return;
+    dndCleanup();
+  }
+
+  /* ---- 손가락: Touch Events (안드로이드 크롬 · iOS 사파리) ---- */
+  function dndTouchPoint(e) {
+    var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+    return t ? { x: t.clientX, y: t.clientY } : null;
+  }
+  function dndTouchStart(e) {
+    if (e.touches && e.touches.length > 1) { dndCleanup(); return; }   // 두 손가락은 끌기가 아니다
+    if (!dndPrepare(e)) return;
+    dnd.mode = 'touch';
+    var p = dndTouchPoint(e);
+    if (!p) return;
+    dnd.sx = p.x; dnd.sy = p.y; dnd.lx = p.x; dnd.ly = p.y;
+  }
+  function dndTouchMove(e) {
+    if (dnd.mode !== 'touch' || !dnd.handle) return;
+    var p = dndTouchPoint(e);
+    if (!p) return;
+    if (!dnd.on) {
+      var dx = p.x - dnd.sx, dy = p.y - dnd.sy;
+      if (Math.abs(dx) < DND_MOVE && Math.abs(dy) < DND_MOVE) return;
+      dndBegin(p.x, p.y);
+    }
+    // 여기서 막지 않으면 iOS 사파리가 고무줄 스크롤·길게 누르기 선택으로 가져간다
+    if (e.cancelable) e.preventDefault();
+    dndUpdate(p.x, p.y);
+  }
+  function dndTouchEnd(e) {
+    if (dnd.mode !== 'touch' || !dnd.handle) return;
+    if (!dnd.on) { dndCleanup(); return; }     // 그냥 눌렀다 뗀 탭 — 아래 클릭(수정)은 그대로 살린다
+    var p = dndTouchPoint(e);
+    if (e.cancelable) e.preventDefault();
+    dndFinish(p ? p.x : dnd.lx, p ? p.y : dnd.ly);
+  }
+  function dndTouchCancel() {
+    if (dnd.mode !== 'touch') return;
+    dndCleanup();
   }
 
   // 선생님을 반 카드에 놓으면 그 반 담당으로 (여러 반은 [수정]에서 체크)
@@ -4171,7 +4392,18 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   /* =========================================================
      9. 이벤트
      ========================================================= */
+  // 끌고 난 직후의 클릭은 삼킨다 — 손을 떼면서 줄/버튼이 눌려 수정 창이 열리는 것을 막는다
   document.addEventListener('click', function (e) {
+    if (Date.now() < dnd.blockClickUntil) {
+      dnd.blockClickUntil = 0;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+
+  document.addEventListener('click', function (e) {
+    // v1.5 — 줄 전체가 '수정'을 여는 줄에서 셀렉트·입력칸을 눌렀을 때는 그대로 둔다
+    if (e.target && e.target.closest && e.target.closest('select,input,textarea')) return;
     var el = e.target.closest('[data-action]');
     if (!el) return;
     var a = el.getAttribute('data-action');
@@ -4237,6 +4469,16 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
       case 'roster-toggle':
         ui.rosterOpen = !ui.rosterOpen;
+        render();
+        break;
+
+      case 'grad-toggle':
+        ui.gradOpen = (ui.gradOpen === false);
+        render();
+        break;
+
+      case 'grad-past':
+        ui.gradPastOpen = !ui.gradPastOpen;
         render();
         break;
 
@@ -4378,6 +4620,9 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         openTeacherForm(el.getAttribute('data-class'), el.getAttribute('data-teacher'));
         break;
 
+      case 'noop':
+        break;   // 손잡이 자체를 눌렀을 때 줄 전체의 수정 동작이 열리지 않게
+
       case 'teacher-del':
         removeTeacher(el.getAttribute('data-id'));
         break;
@@ -4443,7 +4688,13 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   });
 
   // 메모 입력 — 리렌더 없이 저장 (포커스 유지)
-  document.addEventListener('pointerdown', dndStart, { passive: true });
+  // v1.5 — 끌기: 마우스·펜은 Pointer Events, 손가락은 Touch Events(단일 경로).
+  //   touchmove 는 { passive:false } 로 붙여야 iOS 사파리·안드로이드에서 preventDefault 가 먹는다.
+  document.addEventListener('pointerdown', dndPointerDown, { passive: true });
+  document.addEventListener('touchstart', dndTouchStart, { passive: true });
+  document.addEventListener('touchmove', dndTouchMove, { passive: false });
+  document.addEventListener('touchend', dndTouchEnd, { passive: false });
+  document.addEventListener('touchcancel', dndTouchCancel, { passive: true });
 
   document.addEventListener('input', function (e) {
     var el = e.target;

@@ -7,7 +7,7 @@
 - 반별 입장(잠금을 켜면 4자리 PIN) / 관리자(임원·교역자) 통합 PIN `1004`
 - 서버에 연결하지 못하면(지하·비행기 등) 이 기기(`localStorage`)에 먼저 저장하고, 연결되면 자동으로 다시 올립니다.
 
-배포 주소: https://luh702.github.io/lfgc-toddler-attendance/
+배포 주소: https://luh702.github.io/lfgctoddler/
 
 ## 공유 저장 구조 (Supabase)
 

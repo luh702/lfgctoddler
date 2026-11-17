@@ -27,6 +27,7 @@
    v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 · 담당 선생님 명단 보기
           관리 탭에서 선생님 추가·수정·삭제, 반 이름·PIN 관리, 아이 삭제 (관리자 전체 권한)
    v1.0 — Supabase 실시간 공유 저장 (모든 기기·선생님이 같은 자료) · 오프라인은 기기 저장 후 자동 재전송
+   v1.3 — 졸업 예정 생년월일 자동 계산 + 직접 지정(자동 복귀) · 새친구반 카드에서 원탭 반 배정
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -604,6 +605,39 @@ h1,h2,h3,h4,p{margin:0}
   border:1px dashed #CBE9E1;color:#3C8879;font-size:10.5px;font-weight:700;line-height:1.5;
 }
 .nf-tip b{color:#2E7E70}
+/* v1.3 — 새친구반 카드에서 바로 반 배정 · 졸업 예정 자동/직접 지정 */
+.assign-bar{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px;padding-top:8px;
+  border-top:1px dashed #D9EDE7;
+}
+.assign-bar .ab-label{flex:0 0 auto;font-size:10.5px;font-weight:800;color:#2E7E70;letter-spacing:-.1px}
+.assign-chips{display:flex;gap:5px;flex:1;min-width:0;flex-wrap:wrap}
+.assign-chip{
+  height:32px;padding:0 11px;border-radius:999px;border:1px solid #CBE9E1;background:#F1FAF8;
+  color:#2E7E70;font-size:12px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;
+  transition:transform .1s,background .15s;
+}
+.assign-chip:active{transform:scale(.95);background:#DFF2ED}
+.assign-chip:disabled{opacity:.4}
+.seg{display:flex;gap:6px;margin-bottom:7px}
+.seg-btn{
+  flex:1;height:38px;border-radius:11px;border:1px solid var(--line);background:#fff;
+  color:var(--muted);font-size:12px;font-weight:800;letter-spacing:-.2px;
+}
+.seg-btn.active{background:var(--primary-soft);border-color:#F1DAC6;color:var(--primary-dark)}
+.grad-auto{
+  display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;
+  background:#F1FAF8;border:1px solid #CBE9E1;color:#2E7E70;font-size:13px;font-weight:800;
+}
+.grad-auto small{font-weight:700;color:#5C9A8C;font-size:10.5px;letter-spacing:-.1px}
+.grad-auto.empty{background:#FBF7F0;border-color:#F0E7DA;color:var(--muted);font-weight:700;font-size:12px}
+.grad-manual-note{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:5px}
+.grad-reset{
+  display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:7px 11px;
+  border-radius:9px;border:1px dashed #D9CDC0;background:#fff;color:var(--ink-soft);
+  font-size:11px;font-weight:800;letter-spacing:-.1px;
+}
+.grad-reset:active{background:var(--bg-soft)}
 .move-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #F6F0E7}
 .move-row:last-child{border-bottom:0}
 .move-row .nm{flex:1;min-width:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -801,7 +835,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.2';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.3';   // 화면에 보이는 시범용 버전
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
@@ -1784,8 +1818,9 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   }
   // 영국 학년은 9월 1일 시작 — (9/1 Y ~ 8/31 Y+1) 출생 → 유아부 졸업(Reception 시작)은 Y+5년 9월 1일
   function autoGraduation(birth) {
-    if (!birth) return '';
+    if (!birth || !/^\d{4}-\d{2}-\d{2}$/.test(String(birth))) return '';
     var b = parseISO(birth);
+    if (isNaN(b.getTime())) return '';
     var y = (b.getMonth() + 1) >= 9 ? b.getFullYear() : b.getFullYear() - 1;
     return (y + 5) + '-09-01';
   }
@@ -1809,6 +1844,98 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var d = gradDays(c);
     return '<span class="tag-grad' + (d >= 0 && d <= 90 ? ' soon' : '') + '" title="' + esc(fmtLong(g)) +
       ' 유아부 졸업(초등 9월 입학) 예정">🎓 ' + gradShortText(d) + '</span>';
+  }
+
+  /* ---------- v1.3 — 반 배정 (새친구반 → 정규 반) ---------- */
+  // 정규 반 목록 — 새친구반은 '배정 대상'이 아니라 '기다리는 곳'이다
+  function regularClasses() {
+    return data.classes.filter(function (c) { return c.id !== NEW_FRIEND_CLASS; });
+  }
+  // 새친구반 아이를 정규 반으로 보낼 수 있는 사람 — 관리자(임원)와 새친구반 담당 선생님
+  function canAssignNewFriend(t, c) {
+    if (!t || !c || c.classId !== NEW_FRIEND_CLASS) return false;
+    if (t.role === 'admin') return true;
+    return t.classId === NEW_FRIEND_CLASS;
+  }
+  // 이 아이를 이 반으로 옮길 수 있는가 — 관리자는 어디든, 새친구반 담당은 새친구반 → 정규 반만
+  function canMoveChild(t, c, classId) {
+    if (!t || !c || !classById(classId) || c.classId === classId) return false;
+    if (t.role === 'admin') return true;
+    return canAssignNewFriend(t, c) && classId !== NEW_FRIEND_CLASS;
+  }
+  // 새친구반 카드 아래에 바로 뜨는 반 배정 칩 — 원탭으로 배정
+  function assignBarHtml(c, t) {
+    if (!canAssignNewFriend(t, c)) return '';
+    var targets = regularClasses();
+    if (!targets.length) return '';
+    return '<div class="assign-bar">' +
+        '<span class="ab-label">🐣 반 배정</span>' +
+        '<div class="assign-chips">' + targets.map(function (x) {
+          return '<button type="button" class="assign-chip" data-action="assign-class" data-child="' + c.id +
+            '" data-class="' + x.id + '" aria-label="' + esc(c.name) + ' 어린이를 ' + esc(x.name) + '으로 배정">' +
+            esc(x.name) + '</button>';
+        }).join('') + '</div>' +
+      '</div>';
+  }
+
+  /* ---------- v1.3 — 졸업 예정 자동 계산 / 직접 지정 ---------- */
+  function isManualGrad(c) {
+    return !!(c && /^\d{4}-\d{2}-\d{2}$/.test(c.graduation || ''));
+  }
+  function gradAutoTextHtml(birth) {
+    var g = autoGraduation(birth);
+    if (!g) return '🎓 <span class="muted">생년월일을 넣으면 자동으로 계산돼요</span>';
+    return '🎓 ' + esc(fmtDot(g)) + ' <small>' + esc(gradShortText(daysBetween(todayISO(), g))) + ' · 만 5세 9월 학기</small>';
+  }
+  // 등록·수정 창의 졸업 예정 입력 — [자동 계산] / [직접 지정] 전환 + 직접 지정 날짜
+  function graduationFieldHtml(c) {
+    var manual = isManualGrad(c) ? c.graduation : '';
+    return '<div class="field grad-field" data-grad-field>' +
+        '<span>졸업 예정 <em>영국 9월 학기</em></span>' +
+        '<div class="seg" role="group" aria-label="졸업 예정 방식">' +
+          '<button type="button" class="seg-btn' + (manual ? '' : ' active') + '" data-action="grad-mode" data-mode="auto">자동 계산</button>' +
+          '<button type="button" class="seg-btn' + (manual ? ' active' : '') + '" data-action="grad-mode" data-mode="manual">직접 지정</button>' +
+        '</div>' +
+        '<div class="grad-auto" data-grad-auto' + (manual ? ' hidden' : '') + '>' + gradAutoTextHtml(c ? c.birth : '') + '</div>' +
+        '<div class="grad-manual" data-grad-manual' + (manual ? '' : ' hidden') + '>' +
+          '<input class="input" name="graduation" type="date" value="' + esc(manual) + '" aria-label="졸업 예정일 직접 지정">' +
+          '<div class="grad-manual-note" data-grad-note></div>' +
+          '<button type="button" class="grad-reset" data-action="grad-mode" data-mode="auto">↺ 자동 계산으로 되돌리기</button>' +
+        '</div>' +
+        '<input type="hidden" name="gradMode" value="' + (manual ? 'manual' : 'auto') + '">' +
+      '</div>';
+  }
+  // 모달 안에서 생년월일·방식을 바꾸면 다시 그리기 (입력중인 다른 값은 그대로)
+  function refreshGradField() {
+    var root = document.querySelector('#modalRoot [data-grad-field]');
+    if (!root) return;
+    var form = root.closest ? root.closest('form') : null;
+    if (!form) return;
+    var modeEl = form.querySelector('[name="gradMode"]');
+    var birthEl = form.querySelector('[name="birth"]');
+    var manEl = form.querySelector('[name="graduation"]');
+    var autoBox = root.querySelector('[data-grad-auto]');
+    var manBox = root.querySelector('[data-grad-manual]');
+    var note = root.querySelector('[data-grad-note]');
+    var mode = modeEl ? modeEl.value : 'auto';
+    var birth = birthEl ? birthEl.value : '';
+    var auto = autoGraduation(birth);
+
+    Array.prototype.forEach.call(root.querySelectorAll('.seg-btn'), function (b) {
+      b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+    });
+    if (autoBox) {
+      autoBox.innerHTML = gradAutoTextHtml(birth);
+      autoBox.classList.toggle('empty', !auto);
+      autoBox.hidden = (mode !== 'auto');
+    }
+    if (manBox) manBox.hidden = (mode !== 'manual');
+    if (note) {
+      note.textContent = auto
+        ? '생일 기준 자동은 ' + fmtDot(auto) + '예요'
+        : '생일 기준 자동 계산은 생년월일이 있어야 해요';
+    }
+    if (manEl) manEl.setAttribute('aria-required', mode === 'manual' ? 'true' : 'false');
   }
 
   // 수정 권한 — 관리자(임원)는 모든 반, 선생님은 자기 반만
@@ -2237,8 +2364,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<span class="sub">' + (c.desc ? esc(c.desc) + ' · ' : '') + esc(teacherNamesText(c.id)) + '</span>' +
           '<span class="cnt">' + st.p + '/' + st.total + '</span>' +
         '</div>';
-      if (c.id === NEW_FRIEND_CLASS && isAdmin) {
-        list += '<div class="nf-tip">🐣 적응이 끝난 친구는 동그린 사진을 눌러 <b>반 배정 / 이동</b>에서 믿음·소망·사랑·은혜반을 골라 주세요</div>';
+      if (c.id === NEW_FRIEND_CLASS && (isAdmin || canAddNewFriend(t))) {
+        list += '<div class="nf-tip">🐣 적응이 끝난 친구는 카드 아래 <b>반 이름</b>을 누르면 바로 그 반으로 배정돼요 (사진을 눌러 <b>반 배정 / 이동</b>에서 골라도 돼요)</div>';
       }
       if (!kids.length) {
         list += '<div class="card empty"><span class="big">🌱</span>아직 등록된 어린이가 없어요.</div>';
@@ -2341,6 +2468,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
             '<textarea data-memo="' + c.id + '" placeholder="예: 감기로 결석 / 12시 픽업 / 할머니께서 데려감">' + esc(note) + '</textarea>' +
             '<button data-action="memo-done" data-child="' + c.id + '">완료</button>' +
           '</div>' : '') +
+        assignBarHtml(c, t) +
       '</div>';
   }
 
@@ -2882,6 +3010,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<label class="field"><span>생년월일</span><input class="input" name="birth" type="date" max="' + todayISO() + '"></label>' +
           '<label class="field"><span>개월수</span><input class="input" name="months" type="number" inputmode="numeric" min="1" max="96" placeholder="예: 34"></label>' +
         '</div>' +
+        graduationFieldHtml(null) +
         '<label class="field"><span>배정 반</span><select class="input" name="classId">' + classOptions + '</select></label>' +
         '<label class="field"><span>첫 방문 <em>선택</em></span>' +
           '<input class="input" name="firstVisit" type="date" max="' + todayISO() + '" value="' +
@@ -2947,6 +3076,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       })()
     };
     if (draft && draft.photo) child.photo = draft.photo;
+    // 졸업 예정을 직접 지정했으면 그 날짜를, 아니면 생년월일 기준 자동 계산을 쓴다
+    var gMode0 = String(fd.get('gradMode') || 'auto');
+    var gVal0 = String(fd.get('graduation') || '').trim();
+    if (gMode0 === 'manual' && /^\d{4}-\d{2}-\d{2}$/.test(gVal0)) child.graduation = gVal0;
     data.children.push(child);
 
     if (fd.get('firstCheck')) setStatus(child.id, 'p', true);
@@ -3039,7 +3172,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       : '<span class="muted">기록 없음</span>';
     var gTxt = g
       ? esc(fmtDot(g)) + (gd != null ? ' · ' + esc(gradShortText(gd)) : '') +
-        '<span class="info-hint">영국 학년 9월 시작 · 유아부 졸업(초등 입학)</span>'
+        '<span class="info-hint">' + (isManualGrad(c) ? '직접 지정한 날짜' : '생년월일로 자동 계산') +
+        ' · 영국 학년 9월 시작 · 유아부 졸업(초등 입학)</span>'
       : '<span class="muted">생일 정보 없음</span>';
     return '<div class="info-list">' +
       infoRow('이번 주일', esc(fmtMD(base)) + ' · ' + esc(lastTxt)) +
@@ -3114,26 +3248,31 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     }
 
     var isAdmin = t.role === 'admin';
+    var canAssign = canAssignNewFriend(t, c);   // 새친구반 담당 선생님도 자기 반 아이를 정규 반으로 보낼 수 있다
     var classField = '';
-    if (isAdmin) {
+    if (isAdmin || canAssign) {
       var opts = data.classes.map(function (x) {
-        return '<option value="' + x.id + '"' + (x.id === c.classId ? ' selected' : '') + '>' +
+        return '<option value="' + x.id + '"' + (x.id === c.classId ? ' selected' : '') +
+          ((!isAdmin && x.id === NEW_FRIEND_CLASS) ? ' disabled' : '') + '>' +
           esc(x.name) + '</option>';
       }).join('');
       classField =
-        '<label class="field"><span>반 배정 / 이동 <em>관리자</em></span>' +
-          '<select class="input" name="classId">' + opts + '</select></label>' +
+        '<label class="field"><span>반 배정 / 이동 <em>' + (isAdmin ? '관리자' : '새친구반 담당') + '</em></span>' +
+        '<select class="input" name="classId">' + opts + '</select></label>' +
         (c.classId === NEW_FRIEND_CLASS
           ? '<div class="move-hint"><span>🐣</span><span>적응이 끝난 친구를 믿음·소망·사랑·은혜반으로 옮기면 명단·통계에 바로 반영돼요. 출석·메모 기록은 그대로 따라갑니다.</span></div>'
           : '');
     }
     var fvNow = firstVisitOf(c) || '';
     var dateFields =
-      '<label class="field"><span>첫 방문 <em>선택</em></span>' +
-        '<input class="input" name="firstVisit" type="date" max="' + todayISO() + '" value="' + esc(fvNow) + '"></label>' +
-      '<label class="field"><span>졸업 예정 <em>영국 9월 학기</em></span>' +
-        '<input class="input" name="graduation" type="date" value="' + esc(graduationOf(c)) + '"></label>' +
-      '<div class="field-hint">첫 방문일을 바꾸면 지난 주일 명단에도 그 날부터 보여요. 졸업 예정은 생일로 자동 계산되며, 필요하면 직접 고칠 수 있어요.</div>';
+      '<div class="field-row">' +
+        '<label class="field"><span>생년월일</span>' +
+          '<input class="input" name="birth" type="date" max="' + todayISO() + '" value="' + esc(c.birth || '') + '"></label>' +
+        '<label class="field"><span>첫 방문 <em>선택</em></span>' +
+          '<input class="input" name="firstVisit" type="date" max="' + todayISO() + '" value="' + esc(fvNow) + '"></label>' +
+      '</div>' +
+      graduationFieldHtml(c) +
+      '<div class="field-hint">첫 방문일을 바꾸면 지난 주일 명단에도 그 날부터 보여요. 생년월일을 넣거나 바꾸면 졸업 D-day가 바로 다시 계산돼요.</div>';
 
     openModal(head +
       '<form id="childForm" novalidate>' +
@@ -3176,6 +3315,19 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var fd = new FormData(form);
     var name = String(fd.get('name') || '').trim();
     if (!name) { fail('이름을 입력해 주세요.'); return; }
+    var birthIn = String(fd.get('birth') || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthIn) || birthIn > todayISO()) {
+      fail('생년월일을 정확히 넣어 주세요. 생년월일로 졸업 D-day를 계산해요.'); return;
+    }
+    var gMode = String(fd.get('gradMode') || 'auto');
+    var gradIn = String(fd.get('graduation') || '').trim();
+    if (gMode === 'manual' && !/^\d{4}-\d{2}-\d{2}$/.test(gradIn)) {
+      fail('졸업 예정일을 골라 주세요. 생일로 계산하려면 [자동 계산]을 눌러 주세요.'); return;
+    }
+    var wantClass = String(fd.get('classId') || '');
+    if (wantClass && wantClass !== c.classId && classById(wantClass) && !canMoveChild(t, c, wantClass)) {
+      fail('반 이동은 관리자(임원)와 새친구반 담당 선생님만 할 수 있어요.'); return;
+    }
 
     var before = c.photo || '';
     var next = draft.photo || '';
@@ -3183,6 +3335,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var fromClass = c.classId;
 
     c.name = name.slice(0, 20);
+    c.birth = birthIn;
     c.guardian = String(fd.get('guardian') || '').trim() || '연락처 미입력';
     c.note = String(fd.get('note') || '').trim().slice(0, 200);
     c.traits = String(fd.get('traits') || '').trim().slice(0, 160);
@@ -3197,17 +3350,15 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (newText !== (prevP ? prevP.text : '')) setPrayer(pWeek, c.id, newText);
     }
 
-    // 반 배정 / 이동 — 관리자만
-    var wantClass = String(fd.get('classId') || '');
-    if (t.role === 'admin' && wantClass && wantClass !== c.classId && classById(wantClass)) {
+    // 반 배정 / 이동 — 관리자, 또는 새친구반 담당 선생님(새친구반 → 정규 반)
+    if (wantClass && wantClass !== c.classId && classById(wantClass)) {
       c.classId = wantClass;
     }
 
-    // 첫 방문 · 졸업 예정 (비우면 생일로 자동 계산)
+    // 첫 방문 · 졸업 예정 — 자동 계산이면 c.graduation 을 지워 생일 기준으로 돌린다
     var fv = String(fd.get('firstVisit') || '').trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(fv)) c.enrolled = fv;
-    var grad = String(fd.get('graduation') || '').trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(grad)) c.graduation = grad; else delete c.graduation;
+    if (gMode === 'manual') c.graduation = gradIn; else delete c.graduation;
 
     var ok = save(true);
     if (!ok) {
@@ -3674,15 +3825,31 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     toast(tr.name + ' 선생님을 ' + before + '에서 ' + c.name + '으로 옮겼어요');
   }
 
+  // 아이 반 이동 — 관리자(어디든) · 새친구반 담당 선생님(새친구반 → 정규 반만)
   function moveChild(childId, classId) {
-    if (!adminOnly()) return;
-    var c = data.children.filter(function (x) { return x.id === childId; })[0];
-    if (!c || c.classId === classId || !classById(classId)) return;
+    var c = childById(childId);
+    if (!c || !classById(classId) || c.classId === classId) return;
+    if (!canMoveChild(currentTeacher(), c, classId)) {
+      toast('반 이동은 새친구반 담당 선생님과 관리자(임원)만 할 수 있어요.');
+      return;
+    }
     var fromId = c.classId;
     c.classId = classId;
     save();
     render();
     toast(classMoveMessage(c, fromId, classId));
+  }
+
+  // 새친구반 카드의 반 이름을 누르면 한 번 더 확인하고 바로 배정한다
+  function confirmAssign(c, classId) {
+    if (!canMoveChild(currentTeacher(), c, classId)) {
+      toast('반 이동은 새친구반 담당 선생님과 관리자(임원)만 할 수 있어요.');
+      return;
+    }
+    openConfirm(c.name + ' 어린이를 ' + className(classId) + '으로 배정할까요?',
+      '새친구반에서 ' + className(classId) + '으로 옮기고 서버에도 바로 저장해요. 출석·메모·기도제목 기록은 그대로 따라갑니다.',
+      function () { closeModal(); moveChild(c.id, classId); },
+      className(classId) + '으로 배정');
   }
 
   // 반이 바뀔 때의 안내 문구 — 새친구반에서 정규 반으로는 '배정'이라고 말해 준다
@@ -3729,7 +3896,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     // 다른 기기에서 온 변경이 창을 닫을 때까지 밀려 있었으면 지금 반영한다
     if (sync.needsRender) { sync.needsRender = false; render(); }
   }
-  function openConfirm(title, body, cb) {
+  function openConfirm(title, body, cb, okLabel) {
     confirmCb = cb;
     openModal(
       '<div class="modal-head"><h3>' + esc(title) + '</h3>' +
@@ -3737,7 +3904,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       '<p class="confirm-body">' + esc(body) + '</p>' +
       '<div class="modal-actions">' +
         '<button class="btn ghost" data-action="modal-close">취소</button>' +
-        '<button class="btn primary" data-action="confirm-ok">확인</button>' +
+        '<button class="btn primary" data-action="confirm-ok">' + esc(okLabel || '확인') + '</button>' +
       '</div>'
     );
   }
@@ -3857,6 +4024,32 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       case 'child-info':
         openChildInfo(el.getAttribute('data-child'));
         break;
+
+      /* ---- v1.3 — 새친구반 카드에서 바로 반 배정 ---- */
+      case 'assign-class': {
+        var acKid = childById(el.getAttribute('data-child'));
+        var acCls = el.getAttribute('data-class');
+        if (!acKid || !acCls) break;
+        confirmAssign(acKid, acCls);
+        break;
+      }
+
+      /* ---- v1.3 — 졸업 예정: 자동 계산 ↔ 직접 지정 ---- */
+      case 'grad-mode': {
+        var gf = el.closest ? el.closest('[data-grad-field]') : null;
+        var gForm = gf ? gf.closest('form') : null;
+        if (!gForm) break;
+        var gTarget = el.getAttribute('data-mode') === 'manual' ? 'manual' : 'auto';
+        if (gTarget === 'manual') {
+          var gBirth = gForm.querySelector('[name="birth"]');
+          var gMan = gForm.querySelector('[name="graduation"]');
+          if (gMan && !gMan.value && gBirth) gMan.value = autoGraduation(gBirth.value) || '';
+        }
+        var gModeEl = gForm.querySelector('[name="gradMode"]');
+        if (gModeEl) gModeEl.value = gTarget;
+        refreshGradField();
+        break;
+      }
 
       case 'child-del':
         removeChild(el.getAttribute('data-child'));
@@ -3979,6 +4172,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       handlePhotoPick(el);
       return;
     }
+    if (el.name === 'birth' || el.name === 'graduation') {
+      refreshGradField();
+      return;
+    }
     var a = el.getAttribute && el.getAttribute('data-action');
     if (a === 'move-child') {
       moveChild(el.getAttribute('data-child'), el.value);
@@ -3991,6 +4188,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   document.addEventListener('input', function (e) {
     var el = e.target;
     if (!el || !el.getAttribute) return;
+    if (el.name === 'birth') { refreshGradField(); return; }
     var childId = el.getAttribute('data-memo');
     if (!childId) return;
     var key = ui.date;

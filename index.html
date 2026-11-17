@@ -129,7 +129,7 @@ h1,h2,h3,h4,p{margin:0}
 }
 .cc-name{min-width:0;font-size:14px;font-weight:800;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-lock{margin-left:auto;font-size:10px;opacity:.55;flex:0 0 auto}
-.cc-meta{font-size:10.5px;color:var(--muted);font-weight:700}
+.cc-meta{font-size:10.5px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-teachers{font-size:10.5px;line-height:1.45;color:var(--ink-soft);font-weight:700;min-height:15px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cc-foot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-weight:700;margin-top:1px}
@@ -460,7 +460,7 @@ h1,h2,h3,h4,p{margin:0}
 /* ---------------- 반 그룹 / 아이 목록 ---------------- */
 .group-head{display:flex;align-items:center;gap:7px;padding:6px 4px 1px;font-size:12px;font-weight:800;color:var(--ink-soft)}
 .group-head .dot{width:8px;height:8px;border-radius:99px;flex:0 0 auto}
-.group-head .sub{font-size:10.5px;font-weight:600;color:var(--muted)}
+.group-head .sub{font-size:10.5px;font-weight:600;color:var(--muted);min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .group-head .cnt{margin-left:auto;font-size:11px;font-weight:800;color:var(--muted)}
 
 .child{
@@ -780,7 +780,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.0';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.1';   // 화면에 보이는 시범용 버전
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
@@ -1087,11 +1087,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     // v0.7 — 믿음 → 소망 → 사랑 → 은혜 → 새친구(맨 뒤)
     var classes = [
-      { id: 'faith', name: '믿음반', pin: CLASS_PINS.faith },
-      { id: 'hope',  name: '소망반', pin: CLASS_PINS.hope },
-      { id: 'love',  name: '사랑반', pin: CLASS_PINS.love },
-      { id: 'grace', name: '은혜반', pin: CLASS_PINS.grace },
-      { id: 'newkids', name: '새친구반', pin: CLASS_PINS.newkids }
+      { id: 'faith', name: '믿음반', desc: '찬양과 율동으로 마음 여는 반', pin: CLASS_PINS.faith },
+      { id: 'hope',  name: '소망반', desc: '말씀 이야기로 배우는 반', pin: CLASS_PINS.hope },
+      { id: 'love',  name: '사랑반', desc: '친구와 기도로 마음 나누는 반', pin: CLASS_PINS.love },
+      { id: 'grace', name: '은혜반', desc: '예배 순서에 익숙해지는 반', pin: CLASS_PINS.grace },
+      { id: 'newkids', name: '새친구반', desc: '처음 온 친구가 적응하는 반', pin: CLASS_PINS.newkids }
     ];
 
     var admins = ADMIN_SEEDS.map(function (a) {
@@ -1350,6 +1350,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       classes: orderClasses((src.classes || []).map(function (c) {
         return {
           id: c.id, name: c.name || '반',
+          desc: (typeof c.desc === 'string') ? c.desc.slice(0, 40) : '',
           pin: normPin(c.pin, CLASS_PINS[c.id] || '1111')
         };
       })),
@@ -1483,7 +1484,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     src.attendance = src.attendance || {};
 
     if (!classIdExists(src.classes, NEW_FRIEND_CLASS)) {
-      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반' });
+      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반', desc: '처음 온 친구가 적응하는 반' });
     } else {
       src.classes.forEach(function (c) {
         if (c.id !== NEW_FRIEND_CLASS) return;
@@ -1864,7 +1865,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<span class="cc-name">' + esc(c.name) + '</span>' +
           '<span class="cc-lock">' + (data.classPinEnabled ? '🔒' : '') + '</span>' +
         '</span>' +
-        '<span class="cc-meta">' + kidsOf(c.id).length + '명</span>' +
+        '<span class="cc-meta">' + (c.desc ? esc(c.desc) + ' · ' : '') + kidsOf(c.id).length + '명</span>' +
         '<span class="cc-teachers">' + (names.length ? esc(names.join(' · ')) : '선생님 미배정') + '</span>' +
       '</button>';
     }).join('');
@@ -1935,7 +1936,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     confirmCb = function () { loginAsClass(classId); };
     openModal(
       '<div class="modal-head">' +
-        '<div><h3>' + esc(c.name) + '으로 입장하실까요?</h3><p>아이 ' + kidsOf(classId).length + '명</p></div>' +
+        '<div><h3>' + esc(c.name) + '으로 입장하실까요?</h3><p>' + (c.desc ? esc(c.desc) + ' · ' : '') + '아이 ' + kidsOf(classId).length + '명</p></div>' +
         '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button>' +
       '</div>' +
       '<div class="who-card">' +
@@ -2212,7 +2213,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<div class="group-head">' +
           '<span class="dot" style="background:' + classMeta(c.id).color + '"></span>' +
           '<span>' + esc(c.name) + '</span>' +
-          '<span class="sub">' + esc(teacherNamesText(c.id)) + '</span>' +
+          '<span class="sub">' + (c.desc ? esc(c.desc) + ' · ' : '') + esc(teacherNamesText(c.id)) + '</span>' +
           '<span class="cnt">' + st.p + '/' + st.total + '</span>' +
         '</div>';
       if (c.id === NEW_FRIEND_CLASS && isAdmin) {
@@ -2650,7 +2651,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     /* 2) 반 관리 — 이름 · PIN · 잠금 */
     var classBlock =
-      '<div class="section-title">반 관리 <small>이름 · PIN · 잠금</small></div>' +
+      '<div class="section-title">반 관리 <small>이름 · 소개 · PIN</small></div>' +
       '<div class="switch-row">' +
         '<div class="sw-txt"><b>반별 비밀번호 잠금</b><small>' +
           (data.classPinEnabled
@@ -2667,10 +2668,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<div class="ac-head">' +
             '<span class="dot" style="background:' + meta.color + '"></span>' +
             '<span>' + esc(c.name) + '</span>' +
-            '<span class="age">' + kidsOf(c.id).length + '명</span>' +
+            '<span class="age">' + (c.desc ? esc(c.desc) + ' · ' : '') + kidsOf(c.id).length + '명</span>' +
           '</div>' +
           '<div class="admin-row tools">' +
-            '<button class="mini-btn" data-action="class-rename" data-class="' + c.id + '">✏️ 이름 수정</button>' +
+            '<button class="mini-btn" data-action="class-rename" data-class="' + c.id + '">✏️ 반 정보 수정</button>' +
             '<button class="mini-btn" data-action="class-pin" data-class="' + c.id + '">🔑 PIN ' + esc(c.pin) + '</button>' +
           '</div>' +
           '<div class="class-teachers">담당 선생님 · ' + esc(ts.length ? ts.map(function (x) { return x.name; }).join(' · ') : '미배정') + '</div>' +
@@ -3383,19 +3384,21 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     toast(c.name + ' PIN을 바꿨어요 (' + pin + ')');
   }
 
-  /* ---------- 반 이름 수정 (v0.9 — 관리자) ---------- */
+  /* ---------- 반 이름 · 소개 수정 (v0.9 · v1.1 — 관리자) ---------- */
   function openClassForm(classId) {
     var c = classById(classId);
     if (!c) return;
     editState = { kind: 'classmeta', id: classId };
     openModal(
       '<div class="modal-head"><div><h3>' + esc(c.name) + ' 정보 수정</h3>' +
-        '<p>반 이름을 바꿔요 · 아이 ' + kidsOf(c.id).length + '명</p></div>' +
+        '<p>반 이름과 소개를 바꿔요 · 아이 ' + kidsOf(c.id).length + '명</p></div>' +
         '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button></div>' +
       '<form id="classForm" novalidate>' +
         '<label class="field"><span>반 이름 <em>필수</em></span>' +
           '<input class="input" name="name" type="text" autocomplete="off" maxlength="12" value="' + esc(c.name) + '" placeholder="예: 믿음반"></label>' +
-        '<div class="field-hint">이름을 바꿔도 아이·출석·기도제목 기록과 선생님 배정은 그대로 이어져요.</div>' +
+        '<label class="field"><span>반 소개 <em>선택 · 한 줄</em></span>' +
+          '<input class="input" name="desc" type="text" autocomplete="off" maxlength="40" value="' + esc(c.desc || '') + '" placeholder="예: 찬양과 율동으로 마음 여는 반"></label>' +
+        '<div class="field-hint">반 소개는 로그인 화면 반 카드와 출석 화면 반 이름 옆에 보여요. 비우면 표시하지 않아요.</div>' +
         '<div class="form-error" id="cfError" hidden></div>' +
         '<div class="modal-actions">' +
           '<button type="button" class="btn ghost" data-action="modal-close">취소</button>' +
@@ -3419,6 +3422,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     }
     var before = c.name;
     c.name = name.slice(0, 12);
+    c.desc = String(fd.get('desc') || '').trim().slice(0, 40);
     save();
     closeModal();
     render();
@@ -3972,7 +3976,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (!Array.isArray(value)) return false;
       // 반은 이름·PIN만 둔다 (예전 저장값에 남아 있던 연령 표시는 버린다)
       data.classes = orderClasses(value.map(function (c) {
-        return { id: c.id, name: c.name || '반', pin: normPin(c.pin, CLASS_PINS[c.id] || '1111') };
+        return { id: c.id, name: c.name || '반', desc: (typeof c.desc === 'string') ? c.desc.slice(0, 40) : '', pin: normPin(c.pin, CLASS_PINS[c.id] || '1111') };
       }));
       return true;
     }

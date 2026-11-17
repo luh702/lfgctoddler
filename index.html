@@ -21,6 +21,7 @@
           관리 탭은 '관리자 비밀번호(PIN) 변경' 카드 하나
    v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 · 담당 선생님 명단 보기
           관리 탭에서 선생님 추가·수정·삭제, 반 이름·PIN 관리, 아이 삭제 (관리자 전체 권한)
+   v1.0 — Supabase 실시간 공유 저장 (모든 기기·선생님이 같은 자료) · 오프라인은 기기 저장 후 자동 재전송
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -361,6 +362,15 @@ h1,h2,h3,h4,p{margin:0}
   border-bottom:1px solid var(--line);color:#8B7A6C;font-size:10.5px;line-height:1.5;font-weight:500;
 }
 .proto-banner b{font-weight:800;color:#7A6757}
+/* 공유 저장 상태 표시 (v1.0) */
+.sync-badge{
+  display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;
+  padding:1px 7px;border-radius:999px;white-space:nowrap;
+  font-size:10px;font-weight:800;background:#EAF6EE;color:#3F7D5B;
+}
+.sync-badge.start,.sync-badge.saving{background:#FCF2E0;color:#9A7420}
+.sync-badge.error{background:#FBECEE;color:#B25A60}
+.sync-badge.offline,.sync-badge.local{background:#F1EBE3;color:#8A7A6C}
 
 /* ---------------- 뷰 공통 ---------------- */
 .view{padding:13px 13px 112px;display:flex;flex-direction:column;gap:11px}
@@ -749,6 +759,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 <div id="modalRoot"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- v1.0 — 실시간 공유 저장용 Supabase 클라이언트 (CDN, 실패하면 아래 unpkg로 한 번 더 시도) -->
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
+  onload="window.__sbReady&&window.__sbReady()"
+  onerror="var s=document.createElement('script');s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';s.onload=function(){window.__sbReady&&window.__sbReady()};document.head.appendChild(s);"></script>
+
 <script>
 (function () {
   'use strict';
@@ -760,7 +775,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v0.9';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.0';   // 화면에 보이는 시범용 버전
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
@@ -1254,11 +1269,13 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (!data) return true;
     try {
       window.localStorage.setItem(DATA_KEY, JSON.stringify(data));
-      return true;
     } catch (e) {
       if (!silent) toast('저장 공간이 가득 찼어요. 사진을 몇 장 지우면 다시 저장돼요.');
+      schedulePush();                    // 서버에는 올려 둔다
       return false;
     }
+    schedulePush();                      // v1.0 — 공유 DB에도 바뀐 부분만 올린다
+    return true;
   }
   function loadData() {
     var raw = safeGet(DATA_KEY);
@@ -1821,6 +1838,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     else body = attendanceHtml(t);
 
     app.innerHTML = headerHtml(t) + bannerHtml() + '<main class="view">' + body + '</main>' + tabbarHtml(t);
+    paintSync();
 
     if (ui.memoOpen) {
       var ta = document.querySelector('textarea[data-memo="' + ui.memoOpen + '"]');
@@ -2078,7 +2096,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       '</header>';
   }
   function bannerHtml() {
-    return '<div class="proto-banner"><span>🧪</span><span><b>시범용 프로토타입 ' + APP_VERSION_LABEL + '</b> · 현재 기기 내 임시 저장 · 추후 구글 시트/서버 연동 가능</span></div>';
+    return '<div class="proto-banner">' +
+      '<span id="syncBadge" class="sync-badge ' + sync.status + '">' + syncIcon() + ' ' + syncText() + '</span>' +
+      '<span><b>선생님 모두 같은 자료</b> · 한 기기에서 체크하면 다른 기기에도 바로 보여요</span>' +
+    '</div>';
   }
   function tabbarHtml(t) {
     var tabs = [
@@ -3553,6 +3574,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     draft = null;
     editState = null;
     pinState = null;
+    // 다른 기기에서 온 변경이 창을 닫을 때까지 밀려 있었으면 지금 반영한다
+    if (sync.needsRender) { sync.needsRender = false; render(); }
   }
   function openConfirm(title, body, cb) {
     confirmCb = cb;
@@ -3869,6 +3892,392 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   });
 
   /* =========================================================
+     9-5. 실시간 공유 저장 — Supabase (v1.0)
+      자료를 key 단위 문서로 나눠 저장한다:
+        meta(관리자·설정) · classes(반) · teachers(선생님) · children(원아)
+        att:YYYY-MM-DD (그 주일 출석) · prayer:YYYY-MM-DD (그 주 기도제목)
+      저장하면 바뀐 key만 서버에 올리고, 다른 기기에는 방송(broadcast)으로 알린다.
+      서버에 못 올렸을 때는 이 기기에 그대로 두고 자동으로 다시 시도한다.
+     ========================================================= */
+  var SUPABASE_URL = 'https://vyvgkmjekenwgjklrsxq.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_lBWptXiUJm7G18eq-O2H6w_SctQX83l';
+  var SYNC_TABLE = 'app_state';
+  var SYNC_CHANNEL_NAME = 'lfgc-attendance-sync';
+  var SYNC_PENDING_KEY = 'lfgc_nursery_pending_v1';
+  var SYNC_DEVICE_KEY = 'lfgc_nursery_device_v1';
+
+  var sb = null;
+  var sync = {
+    booted: false,
+    started: false,
+    pulled: false,
+    status: 'local',        // local | start | saving | saved | error
+    timer: null, busy: false, again: false,
+    retryTimer: null, pollTimer: null, channel: null,
+    needsRender: false, revs: {}, base: {},
+    lastError: '', lastToast: 0
+  };
+
+  function syncDeviceId() {
+    var id = safeGet(SYNC_DEVICE_KEY);
+    if (!id) { id = 'd' + Math.random().toString(36).slice(2, 8); safeSet(SYNC_DEVICE_KEY, id); }
+    return id;
+  }
+
+  /* ---------- 앱 자료 ↔ 행(key 단위 문서) ---------- */
+  function rowsFromData() {
+    var out = {};
+    if (!data) return out;
+    out.meta = {
+      version: data.version,
+      className: data.className,
+      admins: data.admins || [],
+      classPinEnabled: !!data.classPinEnabled
+    };
+    out.classes = data.classes || [];
+    out.teachers = data.teachers || [];
+    out.children = data.children || [];
+    Object.keys(data.attendance || {}).forEach(function (w) { out['att:' + w] = data.attendance[w] || {}; });
+    Object.keys(data.prayers || {}).forEach(function (w) { out['prayer:' + w] = data.prayers[w] || {}; });
+    return out;
+  }
+
+  function writeRow(key, value) {
+    if (!data || value == null) return false;
+    if (key === 'meta') {
+      if (Array.isArray(value.admins) && value.admins.length) data.admins = value.admins;
+      if (typeof value.version === 'number') data.version = value.version;
+      if (typeof value.className === 'string') data.className = value.className;
+      if (typeof value.classPinEnabled === 'boolean') data.classPinEnabled = value.classPinEnabled;
+      return true;
+    }
+    if (key === 'classes') { if (!Array.isArray(value)) return false; data.classes = orderClasses(value); return true; }
+    if (key === 'teachers') { if (!Array.isArray(value)) return false; data.teachers = value; return true; }
+    if (key === 'children') { if (!Array.isArray(value)) return false; data.children = value; return true; }
+    if (key.indexOf('att:') === 0) {
+      if (!data.attendance) data.attendance = {};
+      data.attendance[key.slice(4)] = (value && typeof value === 'object') ? value : {};
+      return true;
+    }
+    if (key.indexOf('prayer:') === 0) {
+      if (!data.prayers) data.prayers = {};
+      data.prayers[key.slice(7)] = (value && typeof value === 'object') ? value : {};
+      return true;
+    }
+    return false;
+  }
+
+  function isWeekKey(key) { return key.indexOf('att:') === 0 || key.indexOf('prayer:') === 0; }
+
+  // 같은 주일 기록이 두 기기에서 겹치면 아이별로 더 늦게 찍은 기록을 남긴다 (기도는 '함께 기도'도 합침)
+  function mergeRecords(localMap, remoteMap, isPrayer) {
+    var out = {};
+    remoteMap = remoteMap || {}; localMap = localMap || {};
+    Object.keys(remoteMap).forEach(function (id) { out[id] = remoteMap[id]; });
+    Object.keys(localMap).forEach(function (id) {
+      var a = localMap[id], b = out[id];
+      if (!b) { out[id] = a; return; }
+      var ta = Number(a && a.at) || 0, tb = Number(b && b.at) || 0;
+      var pick = (ta >= tb) ? a : b;
+      if (isPrayer && a && b) {
+        var prayed = (pick === a ? (a.prayed || []) : (b.prayed || [])).slice();
+        (a.prayed || []).concat(b.prayed || []).forEach(function (k) { if (prayed.indexOf(k) < 0) prayed.push(k); });
+        pick = { text: pick.text, by: pick.by, byName: pick.byName, at: pick.at, prayed: prayed };
+      }
+      out[id] = pick;
+    });
+    return out;
+  }
+
+  // 서버에서 온 행을 이 기기 자료에 반영. 하나라도 바뀌면 true
+  //  force=true (첫 연결): 서버에 있는 자료가 이 기기 자료보다 우선한다
+  function applyRows(rows, force) {
+    var changed = false;
+    (rows || []).forEach(function (row) {
+      if (!row || !row.key) return;
+      var key = String(row.key);
+      var rev = Number(row.rev) || 0;
+      if (sync.revs[key] != null && rev <= sync.revs[key]) return;      // 이미 반영한 차례
+      if (force) {
+        if (writeRow(key, row.data)) changed = true;
+        sync.base[key] = JSON.stringify(row.data);
+        sync.revs[key] = rev;
+        return;
+      }
+      var localValue = rowsFromData()[key];
+      var dirty = sync.base[key] !== JSON.stringify(localValue);          // 이 기기에서 고친 내용이 아직 안 올라갔다
+      if (dirty && isWeekKey(key)) {
+        writeRow(key, mergeRecords(localValue, row.data, key.indexOf('prayer:') === 0));
+        sync.base[key] = JSON.stringify(row.data);
+        sync.revs[key] = rev;
+        changed = true;
+        schedulePush(120);
+      } else if (dirty) {
+        sync.revs[key] = rev;
+        changed = true;
+        schedulePush(120);
+      } else {
+        if (writeRow(key, row.data)) changed = true;
+        sync.base[key] = JSON.stringify(row.data);
+        sync.revs[key] = rev;
+      }
+    });
+    return changed;
+  }
+
+  /* ---------- 상태 표시 ---------- */
+  function syncText() {
+    if (!sync.started) return '이 기기에만 저장';
+    if (sync.status === 'start') return '공유 저장 연결 중…';
+    if (sync.status === 'saving') return '서버에 저장 중…';
+    if (sync.status === 'saved') return '실시간 공유 저장됨';
+    if (sync.status === 'error') return '서버 저장 실패 · 다시 시도';
+    return '이 기기에만 저장';
+  }
+  function syncIcon() {
+    if (!sync.started) return '📴';
+    if (sync.status === 'saved') return '🔗';
+    if (sync.status === 'error' || sync.status === 'local') return '⚠️';
+    return '⏳';
+  }
+  function paintSync() {
+    var el = document.getElementById('syncBadge');
+    if (!el) return;
+    el.className = 'sync-badge ' + sync.status;
+    el.textContent = syncIcon() + ' ' + syncText();
+  }
+  function setSyncStatus(s) {
+    if (sync.status === s) return;
+    sync.status = s;
+    paintSync();
+    if (s === 'error' && Date.now() - sync.lastToast > 60000) {
+      sync.lastToast = Date.now();
+      toast('서버에 저장하지 못했어요. 이 기기에는 저장했고 계속 다시 시도할게요.');
+    }
+  }
+
+  /* ---------- 이 기기에서 서버로 ---------- */
+  function cacheLocally() {
+    try { window.localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function refreshAfterSync() {
+    cacheLocally();
+    var root = document.getElementById('modalRoot');
+    if (root && root.innerHTML) { sync.needsRender = true; return; }   // 입력 중인 창은 건드리지 않는다
+    render();
+  }
+
+  function schedulePush(delay) {
+    if (!sync.started || !sb) return;
+    if (sync.timer) clearTimeout(sync.timer);
+    sync.timer = setTimeout(function () { sync.timer = null; pushChanges(); }, delay == null ? 350 : delay);
+  }
+
+  function saveFailed() {
+    setSyncStatus('error');
+    persistPending();
+    if (sync.retryTimer) return;
+    sync.retryTimer = setTimeout(function () {
+      sync.retryTimer = null;
+      if (!sb) return;
+      pushChanges();
+    }, 8000);
+  }
+
+  function persistPending() {
+    try {
+      var rows = rowsFromData(), out = {};
+      Object.keys(rows).forEach(function (k) {
+        if (sync.base[k] !== JSON.stringify(rows[k])) out[k] = rows[k];
+      });
+      if (Object.keys(out).length) safeSet(SYNC_PENDING_KEY, JSON.stringify({ at: Date.now(), rows: out }));
+      else window.localStorage.removeItem(SYNC_PENDING_KEY);
+    } catch (e) {}
+  }
+
+  function pushChanges() {
+    if (!sb) return;
+    if (sync.busy) { sync.again = true; return; }
+    var rows = rowsFromData();
+    var up = [], del = [];
+    Object.keys(rows).forEach(function (k) {
+      if (sync.base[k] !== JSON.stringify(rows[k])) up.push(k);
+    });
+    Object.keys(sync.base).forEach(function (k) { if (!(k in rows)) del.push(k); });
+    if (!up.length && !del.length) {
+      if (sync.pulled) setSyncStatus('saved');
+      return;
+    }
+
+    sync.busy = true;
+    setSyncStatus('saving');
+    var now = Date.now();
+    var payload = up.map(function (k) {
+      return { key: k, data: rows[k], rev: Math.max(now, (sync.revs[k] || 0) + 1), updated_by: syncDeviceId() };
+    });
+
+    var step = Promise.resolve();
+    if (payload.length) {
+      step = step.then(function () { return sb.from(SYNC_TABLE).upsert(payload, { onConflict: 'key' }); });
+    }
+    if (del.length) {
+      step = step.then(function () { return sb.from(SYNC_TABLE).delete().in('key', del); });
+    }
+
+    step.then(function (res) {
+      if (res && res.error) throw new Error(res.error.message || 'upsert failed');
+      payload.forEach(function (row) {
+        sync.revs[row.key] = row.rev;
+        sync.base[row.key] = JSON.stringify(row.data);
+      });
+      del.forEach(function (k) { delete sync.base[k]; delete sync.revs[k]; });
+      try { window.localStorage.removeItem(SYNC_PENDING_KEY); } catch (e) {}
+      setSyncStatus('saved');
+      broadcastKeys(up.concat(del));
+      if (sync.again) { sync.again = false; schedulePush(120); }
+    }).catch(function (err) {
+      sync.lastError = (err && err.message) || String(err);
+      saveFailed();
+    }).then(function () {
+      sync.busy = false;
+    });
+  }
+
+  /* ---------- 서버에서 이 기기로 ---------- */
+  function pullAll(done, force) {
+    if (!sb) { if (done) done(new Error('no client')); return; }
+    sb.from(SYNC_TABLE).select('key,data,rev').then(function (res) {
+      if (res.error) { if (done) done(res.error); return; }
+      var changed = applyRows(res.data || [], force);
+      if (done) done(null, changed);
+    }).catch(function (err) { if (done) done(err); });
+  }
+
+  function pullKeys(keys, done) {
+    if (!sb) return;
+    var q = sb.from(SYNC_TABLE).select('key,data,rev');
+    if (keys && keys.length) q = q.in('key', keys);
+    q.then(function (res) {
+      if (res.error) { saveFailed(); return; }
+      var changed = applyRows(res.data || []);
+      if (changed) refreshAfterSync();
+      else paintSync();
+      if (done) done();
+    }).catch(function () { saveFailed(); });
+  }
+
+  /* ---------- 실시간 알림 ---------- */
+  function broadcastKeys(keys) {
+    if (!sync.channel || !keys || !keys.length) return;
+    try {
+      sync.channel.send({ type: 'broadcast', event: 'changed', payload: { keys: keys, from: syncDeviceId() } });
+    } catch (e) { /* 방송 실패해도 주기 확인이 있다 */ }
+  }
+
+  function subscribeRealtime() {
+    if (!sb) return;
+    try {
+      var ch = sb.channel(SYNC_CHANNEL_NAME, { config: { broadcast: { self: false } } });
+      ch.on('broadcast', { event: 'changed' }, function (msg) {
+        var keys = (msg && msg.payload && msg.payload.keys) || null;
+        pullKeys(keys);
+      });
+      ch.on('postgres_changes', { event: '*', schema: 'public', table: SYNC_TABLE }, function (p) {
+        var row = (p && p.new) || null;
+        if (row && row.updated_by === syncDeviceId()) return;    // 내가 올린 것은 이미 반영됨
+        pullKeys(row && row.key ? [row.key] : null);
+      });
+      ch.subscribe();
+      sync.channel = ch;
+    } catch (e) { /* 실시간을 못 켜도 주기 확인으로 동기화된다 */ }
+  }
+
+  function startPolling() {
+    if (sync.pollTimer) return;
+    sync.pollTimer = setInterval(function () {
+      if (document.hidden || !sb) return;
+      sb.from(SYNC_TABLE).select('key,rev').then(function (res) {
+        if (res.error) return;
+        var need = [];
+        (res.data || []).forEach(function (r) {
+          if (sync.revs[r.key] == null || Number(r.rev) > sync.revs[r.key]) need.push(r.key);
+        });
+        if (need.length) pullKeys(need);
+      }).catch(function () {});
+    }, 30000);
+  }
+
+  /* ---------- 시작 · 첫 동기화 ---------- */
+  function restorePending() {
+    var raw = safeGet(SYNC_PENDING_KEY);
+    if (!raw) return null;
+    try {
+      var p = JSON.parse(raw);
+      return (p && p.rows && Object.keys(p.rows).length) ? p.rows : null;
+    } catch (e) { return null; }
+  }
+
+  function syncConnect() {
+    if (sb) { return; }
+    try {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+    } catch (e) { sb = null; sync.started = false; setSyncStatus('local'); return; }
+
+    sync.started = true;
+    setSyncStatus('start');
+    firstSync();
+  }
+
+  // 첫 동기화 — 서버 자료를 먼저 받아온 뒤, 이 기기에만 있는 내용을 올린다
+  function firstSync() {
+    if (!sb) return;
+    var pending = restorePending();
+    pullAll(function (err) {
+      if (err) {
+        setSyncStatus('error');
+        if (firstSyncTimer) return;
+        firstSyncTimer = setTimeout(function () { firstSyncTimer = null; firstSync(); }, 8000);
+        return;
+      }
+      sync.pulled = true;
+      // 지난번에 못 올린 변경은 이 기기 내용을 살려 다시 올린다
+      if (pending) {
+        Object.keys(pending).forEach(function (k) {
+          if (isWeekKey(k)) writeRow(k, mergeRecords(rowsFromData()[k], pending[k], k.indexOf('prayer:') === 0));
+          else writeRow(k, pending[k]);
+        });
+      }
+
+      refreshAfterSync();
+      subscribeRealtime();
+      startPolling();
+      schedulePush(0);
+      setSyncStatus('saved');
+    }, true);
+  }
+
+  var firstSyncTimer = null;
+
+  function syncStart() {
+    if (sync.booted) return;
+    sync.booted = true;
+    if (window.supabase && window.supabase.createClient) { syncConnect(); return; }
+    // CDN이 아직이거나 막혔을 때 — 늦게라도 오면 연결한다
+    window.__sbReady = function () { syncConnect(); };
+    setTimeout(function () { if (!sb || !sync.started) setSyncStatus('local'); }, 12000);
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && sync.started && sb) pullKeys(null);
+  });
+  window.addEventListener('online', function () {
+    if (sync.started && sb) pullKeys(null);
+  });
+
+  /* =========================================================
      10. 시작
      ========================================================= */
   function init() {
@@ -3885,6 +4294,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var d = parseISO(ui.date);
     ui.bMonth = { y: d.getFullYear(), m: d.getMonth() + 1 };
     render();
+    syncStart();                        // v1.0 — 공유 DB에서 자료 받아오기 시작
   }
 
   init();

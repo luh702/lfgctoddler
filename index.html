@@ -3010,7 +3010,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     for (var aa = 3; aa <= 8; aa++) {
       ageOpts += '<option value="' + aa + '"' + (aa === st.gradAge ? ' selected' : '') + '>만 ' + aa + '세</option>';
     }
-    var exBirth = (new Date().getFullYear() - st.gradAge) + '-03-15';
+    // 예: 요즘 유아부 나이대가 이 기준이면 언제 졸업하는지 (다음 학기 기준으로 보여 준다)
+    var exBirth = (new Date().getFullYear() - st.gradAge + 2) + '-03-15';
     var exGrad = autoGraduation(exBirth);
     var settingsBlock =
       '<div class="section-title">앱 기본 설정 <small>제목 · 공지 · 졸업 기준</small></div>' +
@@ -5111,7 +5112,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var out = {};
     if (!data) return out;
     out.meta = {
-      version: data.version,
+      version: DATA_VERSION,
       className: data.className,
       admins: data.admins || [],
       classPinEnabled: !!data.classPinEnabled,

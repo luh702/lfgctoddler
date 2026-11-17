@@ -129,7 +129,7 @@ h1,h2,h3,h4,p{margin:0}
 }
 .cc-name{min-width:0;font-size:14px;font-weight:800;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-lock{margin-left:auto;font-size:10px;opacity:.55;flex:0 0 auto}
-.cc-age{font-size:10.5px;color:var(--muted);font-weight:700}
+.cc-meta{font-size:10.5px;color:var(--muted);font-weight:700}
 .cc-teachers{font-size:10.5px;line-height:1.45;color:var(--ink-soft);font-weight:700;min-height:15px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cc-foot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-weight:700;margin-top:1px}
@@ -293,16 +293,16 @@ h1,h2,h3,h4,p{margin:0}
 .class-grid.primary .class-card{padding:14px 13px 13px;border-radius:19px}
 .class-grid.primary .cc-emoji{width:34px;height:34px;border-radius:11px;font-size:17px}
 .class-grid.primary .cc-name{font-size:15px}
-.class-grid.primary .cc-age{font-size:11px}
+.class-grid.primary .cc-meta{font-size:11px}
 .class-grid.primary .cc-teachers{font-size:10.5px;min-height:16px}
 /* 다섯 번째(새친구반)는 한 줄을 다 쓰므로 가로로 눕혀 자리를 아끼고 눈에 띄게 */
 .class-grid.primary > .class-card:last-child:nth-child(odd){
   display:grid;grid-template-columns:1fr auto;
-  grid-template-areas:"top age" "top teachers";
+  grid-template-areas:"top meta" "top teachers";
   align-items:center;column-gap:12px;row-gap:3px;
 }
 .class-grid.primary > .class-card:last-child:nth-child(odd) .cc-top{grid-area:top}
-.class-grid.primary > .class-card:last-child:nth-child(odd) .cc-age{grid-area:age;text-align:right;align-self:end}
+.class-grid.primary > .class-card:last-child:nth-child(odd) .cc-meta{grid-area:meta;text-align:right;align-self:end}
 .class-grid.primary > .class-card:last-child:nth-child(odd) .cc-teachers{grid-area:teachers;text-align:right;align-self:start;min-height:0}
 /* 이름·문장이 단어 중간에서 끊기지 않도록 */
 .cc-teachers,.login-note{word-break:keep-all}
@@ -1087,11 +1087,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     // v0.7 — 믿음 → 소망 → 사랑 → 은혜 → 새친구(맨 뒤)
     var classes = [
-      { id: 'faith', name: '믿음반', ageLabel: '30~40개월', pin: CLASS_PINS.faith },
-      { id: 'hope',  name: '소망반', ageLabel: '3~4세', pin: CLASS_PINS.hope },
-      { id: 'love',  name: '사랑반', ageLabel: '4~5세', pin: CLASS_PINS.love },
-      { id: 'grace', name: '은혜반', ageLabel: '5세', pin: CLASS_PINS.grace },
-      { id: 'newkids', name: '새친구반', ageLabel: '적응 기간', pin: CLASS_PINS.newkids }
+      { id: 'faith', name: '믿음반', pin: CLASS_PINS.faith },
+      { id: 'hope',  name: '소망반', pin: CLASS_PINS.hope },
+      { id: 'love',  name: '사랑반', pin: CLASS_PINS.love },
+      { id: 'grace', name: '은혜반', pin: CLASS_PINS.grace },
+      { id: 'newkids', name: '새친구반', pin: CLASS_PINS.newkids }
     ];
 
     var admins = ADMIN_SEEDS.map(function (a) {
@@ -1349,7 +1349,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       // v0.7 — 반 목록은 항상 고정 순서 (믿음 · 소망 · 사랑 · 은혜 · 새친구). 자료는 그대로 둔다.
       classes: orderClasses((src.classes || []).map(function (c) {
         return {
-          id: c.id, name: c.name || '반', ageLabel: c.ageLabel || '',
+          id: c.id, name: c.name || '반',
           pin: normPin(c.pin, CLASS_PINS[c.id] || '1111')
         };
       })),
@@ -1483,12 +1483,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     src.attendance = src.attendance || {};
 
     if (!classIdExists(src.classes, NEW_FRIEND_CLASS)) {
-      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반', ageLabel: '적응 기간' });
+      src.classes.unshift({ id: NEW_FRIEND_CLASS, name: '새친구반' });
     } else {
       src.classes.forEach(function (c) {
         if (c.id !== NEW_FRIEND_CLASS) return;
         if (!c.name) c.name = '새친구반';
-        if (!c.ageLabel) c.ageLabel = '적응 기간';
       });
     }
 
@@ -1865,7 +1864,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<span class="cc-name">' + esc(c.name) + '</span>' +
           '<span class="cc-lock">' + (data.classPinEnabled ? '🔒' : '') + '</span>' +
         '</span>' +
-        '<span class="cc-age">' + esc(c.ageLabel) + ' · ' + kidsOf(c.id).length + '명</span>' +
+        '<span class="cc-meta">' + kidsOf(c.id).length + '명</span>' +
         '<span class="cc-teachers">' + (names.length ? esc(names.join(' · ')) : '선생님 미배정') + '</span>' +
       '</button>';
     }).join('');
@@ -1889,7 +1888,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           ' 다른 반은 <b>보기만</b> 되고, 내 반만 고칠 수 있어요.<br>' +
           '⚙️ 관리자(임원 · 교역자)는 <b>[관리자 입장]</b> → 4자리 PIN 한 번이면 돼요.<br>' +
           '🧪 시범용이라 PIN 창에 <b>데모 PIN</b>이 보여요. 실제 쓰실 때는 관리 탭에서 바꾸세요.</div>' +
-        '<div class="login-ver">30개월 ~ 5세 · ' + data.classes.length + '개 반 · 선생님 ' + data.teachers.length + '명 · 시범용 ' + APP_VERSION_LABEL + '</div>' +
+        '<div class="login-ver">' + data.classes.length + '개 반 · 선생님 ' + data.teachers.length + '명 · 시범용 ' + APP_VERSION_LABEL + '</div>' +
       '</div>';
   }
 
@@ -1936,7 +1935,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     confirmCb = function () { loginAsClass(classId); };
     openModal(
       '<div class="modal-head">' +
-        '<div><h3>' + esc(c.name) + '으로 입장하실까요?</h3><p>' + esc(c.ageLabel) + ' · ' + kidsOf(classId).length + '명</p></div>' +
+        '<div><h3>' + esc(c.name) + '으로 입장하실까요?</h3><p>아이 ' + kidsOf(classId).length + '명</p></div>' +
         '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button>' +
       '</div>' +
       '<div class="who-card">' +
@@ -2213,7 +2212,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<div class="group-head">' +
           '<span class="dot" style="background:' + classMeta(c.id).color + '"></span>' +
           '<span>' + esc(c.name) + '</span>' +
-          '<span class="sub">' + esc(c.ageLabel) + ' · ' + esc(teacherNamesText(c.id)) + '</span>' +
+          '<span class="sub">' + esc(teacherNamesText(c.id)) + '</span>' +
           '<span class="cnt">' + st.p + '/' + st.total + '</span>' +
         '</div>';
       if (c.id === NEW_FRIEND_CLASS && isAdmin) {
@@ -2668,7 +2667,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<div class="ac-head">' +
             '<span class="dot" style="background:' + meta.color + '"></span>' +
             '<span>' + esc(c.name) + '</span>' +
-            '<span class="age">' + esc(c.ageLabel) + ' · ' + kidsOf(c.id).length + '명</span>' +
+            '<span class="age">' + kidsOf(c.id).length + '명</span>' +
           '</div>' +
           '<div class="admin-row tools">' +
             '<button class="mini-btn" data-action="class-rename" data-class="' + c.id + '">✏️ 이름 수정</button>' +
@@ -2838,7 +2837,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var classOptions = data.classes.map(function (c) {
       var allowed = t.role === 'admin' || c.id === t.classId;
       return '<option value="' + c.id + '"' + (c.id === defaultClass ? ' selected' : '') + (allowed ? '' : ' disabled') + '>' +
-        esc(c.name) + ' · ' + esc(c.ageLabel) + '</option>';
+        esc(c.name) + '</option>';
     }).join('');
 
     var md = fmtMD(ui.date);
@@ -3093,7 +3092,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (isAdmin) {
       var opts = data.classes.map(function (x) {
         return '<option value="' + x.id + '"' + (x.id === c.classId ? ' selected' : '') + '>' +
-          esc(x.name) + ' · ' + esc(x.ageLabel) + '</option>';
+          esc(x.name) + '</option>';
       }).join('');
       classField =
         '<label class="field"><span>반 배정 / 이동 <em>관리자</em></span>' +
@@ -3384,20 +3383,18 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     toast(c.name + ' PIN을 바꿨어요 (' + pin + ')');
   }
 
-  /* ---------- 반 이름 · 연령 표시 수정 (v0.9 — 관리자) ---------- */
+  /* ---------- 반 이름 수정 (v0.9 — 관리자) ---------- */
   function openClassForm(classId) {
     var c = classById(classId);
     if (!c) return;
     editState = { kind: 'classmeta', id: classId };
     openModal(
       '<div class="modal-head"><div><h3>' + esc(c.name) + ' 정보 수정</h3>' +
-        '<p>반 이름과 연령 표시를 바꿔요 · 아이 ' + kidsOf(c.id).length + '명</p></div>' +
+        '<p>반 이름을 바꿔요 · 아이 ' + kidsOf(c.id).length + '명</p></div>' +
         '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button></div>' +
       '<form id="classForm" novalidate>' +
         '<label class="field"><span>반 이름 <em>필수</em></span>' +
           '<input class="input" name="name" type="text" autocomplete="off" maxlength="12" value="' + esc(c.name) + '" placeholder="예: 믿음반"></label>' +
-        '<label class="field"><span>연령 표시 <em>선택</em></span>' +
-          '<input class="input" name="ageLabel" type="text" autocomplete="off" maxlength="16" value="' + esc(c.ageLabel) + '" placeholder="예: 3~4세"></label>' +
         '<div class="field-hint">이름을 바꿔도 아이·출석·기도제목 기록과 선생님 배정은 그대로 이어져요.</div>' +
         '<div class="form-error" id="cfError" hidden></div>' +
         '<div class="modal-actions">' +
@@ -3422,7 +3419,6 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     }
     var before = c.name;
     c.name = name.slice(0, 12);
-    c.ageLabel = String(fd.get('ageLabel') || '').trim().slice(0, 16);
     save();
     closeModal();
     render();
@@ -3972,7 +3968,14 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (typeof value.classPinEnabled === 'boolean') data.classPinEnabled = value.classPinEnabled;
       return true;
     }
-    if (key === 'classes') { if (!Array.isArray(value)) return false; data.classes = orderClasses(value); return true; }
+    if (key === 'classes') {
+      if (!Array.isArray(value)) return false;
+      // 반은 이름·PIN만 둔다 (예전 저장값에 남아 있던 연령 표시는 버린다)
+      data.classes = orderClasses(value.map(function (c) {
+        return { id: c.id, name: c.name || '반', pin: normPin(c.pin, CLASS_PINS[c.id] || '1111') };
+      }));
+      return true;
+    }
     if (key === 'teachers') { if (!Array.isArray(value)) return false; data.teachers = value; return true; }
     if (key === 'children') { if (!Array.isArray(value)) return false; data.children = value; return true; }
     if (key.indexOf('att:') === 0) {

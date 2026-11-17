@@ -6,7 +6,7 @@
 - 데이터는 각 기기 브라우저의 `localStorage`에 저장됩니다 (서버 없음)
 - 반별 입장(PIN) / 관리자(임원·교역자) 통합 PIN `1004`
 
-배포 주소: https://luh702.github.io/1fgc-nursery-attendance/
+배포 주소: https://luh702.github.io/lfgc-toddler-attendance/
 
 ## 배포 방식
 

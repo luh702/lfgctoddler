@@ -31,6 +31,8 @@
    v1.4 — 등록카드 사진으로 자동 입력(📷 Gemini 비전) · 졸업 예정자 카드 강조
    v1.5 — 반 소개(한 줄 설명) 기본값 비움 · 반 입장 창은 '담당 선생님' 이름 순서
           🎓 졸업 예정자 모아보기 · 손가락(안드로이드·아이폰) 드래그·수정 개선
+   v1.6 — 관리 탭에서 직접: 반 추가·삭제·순서(▲▼) · 부서 제목 · 교사 한 줄 공지
+          졸업 기준(월·나이) 설정 · 모두 app_state(meta)로 모든 기기에 바로 반영
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -765,6 +767,21 @@ body.dnd-on [data-drop-class].admin-class{border-color:#E3C9A9;box-shadow:0 0 0 
 }
 .data-note{font-size:10.5px;line-height:1.6;color:var(--muted);font-weight:600;padding:0 4px}
 
+/* ============ v1.6 — 교사 한 줄 공지 · 반 추가·순서·삭제 ============ */
+.notice-bar{
+  display:flex;align-items:flex-start;gap:7px;margin:0 0 10px;padding:10px 12px;
+  border-radius:14px;background:var(--primary-soft);border:1px solid #F3DCC9;
+  color:#8A5A3C;font-size:12px;font-weight:800;line-height:1.5;letter-spacing:-.2px;
+}
+.notice-bar .nb-ico{flex:0 0 auto;font-size:13px;line-height:1.4}
+.notice-bar .nb-tx{flex:1;min-width:0;white-space:pre-wrap;word-break:keep-all}
+.mini-btn:disabled{opacity:.32}
+.class-add-row{margin:0 0 4px}
+.class-add-row .add-btn{margin-top:0}
+.set-grid{display:flex;gap:9px}
+.set-grid .field{flex:1;min-width:0}
+.set-example{margin:0 0 11px;padding:9px 11px;border-radius:12px;background:#F1FAF8;border:1px solid #CBE9E1;color:#2E7E70;font-size:11px;font-weight:800;line-height:1.5}
+
 /* ============ v0.9 — 반으로 입장 · 담당 선생님 명단 · 관리자 전체 권한 ============ */
 /* 출석 화면의 '담당 선생님 명단' — 접었다 펴는 카드 */
 .roster-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden}
@@ -926,13 +943,28 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var DATA_KEY = 'lfgc_nursery_v1';
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
-  var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.5';   // 화면에 보이는 시범용 버전
+  var DATA_VERSION = 9;             // v1.6 — 관리자가 앱 설정·반 목록을 직접 바꾼다 (자료 초기화 없음)
+  var APP_VERSION_LABEL = 'v1.6';   // 화면에 보이는 시범용 버전
+
+  // v1.6 — 앱 기본 설정 (관리 탭에서 바꾸고, meta 행으로 모든 기기에 함께 간다)
+  var DEFAULT_TITLE = '런던순복음교회 유아부';
+  var DEFAULT_SETTINGS = { title: DEFAULT_TITLE, notice: '', gradMonth: 9, gradAge: 5 };
+
+  // v1.6 — 새로 만든 반에 돌아가며 붙는 색·이모지 (기존 5개 반은 CLASS_META 그대로)
+  var CLASS_PALETTE = [
+    { color: '#C08552', soft: '#FBF0E4', emoji: '🍎' },
+    { color: '#5B8FB9', soft: '#EAF2F9', emoji: '🐳' },
+    { color: '#7FA85C', soft: '#EFF6E6', emoji: '🌻' },
+    { color: '#B2719B', soft: '#F9EDF5', emoji: '🌼' },
+    { color: '#4F9A9A', soft: '#E8F5F5', emoji: '🐬' },
+    { color: '#A8834A', soft: '#F7F0E3', emoji: '🦁' }
+  ];
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
-  // v0.7 — 반이 보이는 순서: 믿음 → 소망 → 사랑 → 은혜 → 새친구(맨 뒤)
-  //  로그인 화면 · 반 칩 · 통계 차트 · 관리 탭 · 저장값 정리(normalize)가 모두 이 순서를 따른다.
+  // v0.7 — 처음 보이는 반 순서(샘플): 믿음 → 소망 → 사랑 → 은혜 → 새친구(맨 뒤)
+  //  v1.6부터 실제 순서는 data.classes 배열 순서를 따른다 (관리 탭 ▲▼로 바꾼 그 순서).
+  //  CLASS_ORDER는 예전 저장값·샘플을 만들 때의 기본 순서로만 남긴다.
   var CLASS_ORDER = ['faith', 'hope', 'love', 'grace', 'newkids'];
 
   var CLASS_META = {
@@ -1125,18 +1157,28 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var b = 1000 + Math.floor(hash01(name + '#b') * 9000);
     return '010-' + a + '-' + b;
   }
-  function classMeta(id) { return CLASS_META[id] || FALLBACK_META; }
-  // 반 목록을 고정 순서(CLASS_ORDER)로 정리한다. 모르는 반은 뒤에 원래 순서대로 둔다.
+  function classMeta(id) {
+    if (CLASS_META[id]) return CLASS_META[id];
+    var c = null;
+    try { c = (data && data.classes) ? classById(id) : null; } catch (e) { c = null; }
+    // v1.6 — 관리자가 새로 만든 반은 만들 때 정한 색·이모지를 그대로 쓴다
+    if (c && c.color && c.soft && c.emoji) return { color: c.color, soft: c.soft, emoji: c.emoji };
+    return FALLBACK_META;
+  }
+  // v1.6 — 반 순서는 저장된 배열 순서를 그대로 따른다 (관리 탭 ▲▼로 바꾼 그 순서).
+  //  같은 id가 두 번 들어온 경우에만 앞의 하나를 남긴다.
   function orderClasses(list) {
-    var arr = (list || []).slice();
-    function rank(c) {
-      var i = CLASS_ORDER.indexOf(c && c.id);
-      return i < 0 ? CLASS_ORDER.length : i;
-    }
-    return arr
-      .map(function (c, i) { return { c: c, i: i, r: rank(c) }; })
-      .sort(function (a, b) { return (a.r - b.r) || (a.i - b.i); })
-      .map(function (x) { return x.c; });
+    var out = [], seen = {};
+    (list || []).forEach(function (c) {
+      if (!c || !c.id || seen[c.id]) return;
+      seen[c.id] = true;
+      out.push(c);
+    });
+    return out;
+  }
+  function classRank(id) {
+    for (var i = 0; i < data.classes.length; i++) if (data.classes[i].id === id) return i;
+    return -1;
   }
   function classById(id) {
     for (var i = 0; i < data.classes.length; i++) if (data.classes[i].id === id) return data.classes[i];
@@ -1371,6 +1413,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
     return {
       version: DATA_VERSION,
+      settings: normSettings(null),
       classes: classes,
       admins: admins,
       teachers: teachers,
@@ -1496,13 +1539,20 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return {
       version: DATA_VERSION,
       className: className,
-      // v0.7 — 반 목록은 항상 고정 순서 (믿음 · 소망 · 사랑 · 은혜 · 새친구). 자료는 그대로 둔다.
+      // v1.6 — 관리자가 고치는 기본 설정 (제목 · 한 줄 공지 · 졸업 기준)
+      settings: normSettings(null),
+      // v1.6 — 반 목록 순서는 저장된 순서 그대로 (관리 탭 ▲▼)
       classes: orderClasses((src.classes || []).map(function (c) {
-        return {
+        var x = {
           id: c.id, name: c.name || '반',
           desc: (typeof c.desc === 'string') ? c.desc.slice(0, 40) : '',
           pin: normPin(c.pin, CLASS_PINS[c.id] || '1111')
         };
+        // 새로 만든 반의 색·이모지 (없으면 classMeta가 기본값을 준다)
+        if (typeof c.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.color)) x.color = c.color;
+        if (typeof c.soft === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.soft)) x.soft = c.soft;
+        if (typeof c.emoji === 'string' && c.emoji) x.emoji = c.emoji.slice(0, 4);
+        return x;
       })),
       admins: admins,
       teachers: teachers,
@@ -1557,6 +1607,22 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function normPin(v, fallback) {
     var s = String(v == null ? '' : v).replace(/\D/g, '').slice(0, 4);
     return s.length === 4 ? s : fallback;
+  }
+
+  // v1.6 — 앱 기본 설정(부서 제목·한 줄 공지·졸업 기준)을 항상 쓸 수 있는 모양으로 맞춘다
+  function normSettings(src) {
+    var s = (src && typeof src === 'object') ? src : {};
+    var m = Number(s.gradMonth);
+    if (!(m >= 1 && m <= 12)) m = DEFAULT_SETTINGS.gradMonth;
+    var a = Number(s.gradAge);
+    if (!(a >= 3 && a <= 8)) a = DEFAULT_SETTINGS.gradAge;
+    var title = (typeof s.title === 'string') ? s.title.trim().slice(0, 30) : '';
+    var notice = (typeof s.notice === 'string') ? s.notice.trim().slice(0, 80) : '';
+    return { title: title || DEFAULT_SETTINGS.title, notice: notice, gradMonth: m, gradAge: a };
+  }
+  function settingsOf() {
+    if (!data || !data.settings) return normSettings(null);
+    return data.settings;
   }
 
   // v0.8 — 예전 저장값에서 관리자 PIN 하나를 골라낸다: 첫 관리자 PIN → 예전 단일 adminPin → 1004
@@ -1912,12 +1978,19 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return '온 지 ' + Math.max(1, Math.round(d / 7)) + '주째';
   }
   // 영국 학년은 9월 1일 시작 — (9/1 Y ~ 8/31 Y+1) 출생 → 유아부 졸업(Reception 시작)은 Y+5년 9월 1일
+  // v1.6 — 학기 시작 월과 기준 나이는 관리 탭 '졸업 기준'에서 바꾼다 (기본: 9월 · 만 5세)
+  function gradRuleText() {
+    var s = settingsOf();
+    return '만 ' + s.gradAge + '세 · ' + s.gradMonth + '월';
+  }
   function autoGraduation(birth) {
     if (!birth || !/^\d{4}-\d{2}-\d{2}$/.test(String(birth))) return '';
     var b = parseISO(birth);
     if (isNaN(b.getTime())) return '';
-    var y = (b.getMonth() + 1) >= 9 ? b.getFullYear() : b.getFullYear() - 1;
-    return (y + 5) + '-09-01';
+    var s = settingsOf();
+    var startMonth = s.gradMonth, age = s.gradAge;
+    var y = (b.getMonth() + 1) >= startMonth ? b.getFullYear() : b.getFullYear() - 1;
+    return (y + age) + '-' + pad2(startMonth) + '-01';
   }
   function graduationOf(c) {
     if (c.graduation && /^\d{4}-\d{2}-\d{2}$/.test(c.graduation)) return c.graduation;
@@ -1950,7 +2023,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var text = hl === 'past' ? '🎓 졸업 대상' : hl === 'due' ? '🎓 졸업 예정' : '🎓 ' + gradShortText(d);
     var cls = hl === 'past' ? ' past' : hl === 'due' ? ' due' : (d >= 0 && d <= 90 ? ' soon' : '');
     return '<span class="tag-grad' + cls + '" title="' + esc(fmtLong(g)) +
-      ' 유아부 졸업(초등 9월 입학) 예정">' + text + '</span>';
+      ' 유아부 졸업(초등 ' + settingsOf().gradMonth + '월 입학) 예정">' + text + '</span>';
   }
 
   /* ---------- v1.5 — 🎓 졸업 예정자 모아보기 ---------- */
@@ -2041,7 +2114,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function gradAutoTextHtml(birth) {
     var g = autoGraduation(birth);
     if (!g) return '🎓 <span class="muted">생년월일을 넣으면 자동으로 계산돼요</span>';
-    return '🎓 ' + esc(fmtDot(g)) + ' <small>' + esc(gradShortText(daysBetween(todayISO(), g))) + ' · 만 5세 9월 학기</small>';
+    return '🎓 ' + esc(fmtDot(g)) + ' <small>' + esc(gradShortText(daysBetween(todayISO(), g))) + ' · ' + esc(gradRuleText()) + ' 학기</small>';
   }
   function gradAutoNoteText(birth) {
     var g = autoGraduation(birth);
@@ -2052,7 +2125,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var manual = isManualGrad(c) ? c.graduation : '';
     var birth = c ? c.birth : '';
     return '<div class="field grad-field" data-grad-field>' +
-        '<span>졸업 예정 <em>영국 9월 학기</em></span>' +
+        '<span>졸업 예정 <em>' + esc(gradRuleText()) + ' 기준</em></span>' +
         '<div class="seg" role="group" aria-label="졸업 예정 방식">' +
           '<button type="button" class="seg-btn' + (manual ? '' : ' active') + '" data-action="grad-mode" data-mode="auto">자동 계산</button>' +
           '<button type="button" class="seg-btn' + (manual ? ' active' : '') + '" data-action="grad-mode" data-mode="manual">직접 지정</button>' +
@@ -2150,6 +2223,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     else body = attendanceHtml(t);
 
     app.innerHTML = headerHtml(t) + bannerHtml() + '<main class="view">' + body + '</main>' + tabbarHtml(t);
+    try { document.title = settingsOf().title + ' 출석부'; } catch (e) {}
     paintSync();
 
     if (ui.memoOpen) {
@@ -2181,7 +2255,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       '<div class="login">' +
         '<div class="login-top">' +
           '<div class="login-mark">🐣</div>' +
-          '<h1>런던순복음교회 <span>유아부</span></h1>' +
+          '<h1>' + titleHtml() + '</h1>' +
           '<p>주일 출석체크 · 우리 반을 골라 주세요</p>' +
         '</div>' +
         '<div class="login-sec classes">' +
@@ -2401,12 +2475,25 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       '<header class="app-header">' +
         '<div class="brand">' +
           '<span class="brand-mark">🐣</span>' +
-          '<div class="brand-txt"><b>런던순복음교회 유아부</b>' +
+          '<div class="brand-txt"><b>' + esc(settingsOf().title) + '</b>' +
             '<small>' + esc(roleTxt) + '</small>' +
           '</div>' +
         '</div>' +
         '<button class="logout" data-action="logout">' + esc(whoTxt) + ' <span>· 나가기</span></button>' +
       '</header>';
+  }
+  // v1.6 — 제목의 마지막 단어만 색을 준다 (예: 런던순복음교회 <span>유아부</span>)
+  function titleHtml() {
+    var s = settingsOf().title;
+    var i = s.lastIndexOf(' ');
+    if (i > 0 && i < s.length - 1) return esc(s.slice(0, i)) + ' <span>' + esc(s.slice(i + 1)) + '</span>';
+    return esc(s);
+  }
+  // v1.6 — 교사 한 줄 공지 (비우면 배너 없음)
+  function noticeHtml() {
+    var n = settingsOf().notice;
+    if (!n) return '';
+    return '<div class="notice-bar"><span class="nb-ico">📢</span><span class="nb-tx">' + esc(n) + '</span></div>';
   }
   function bannerHtml() {
     return '<div class="proto-banner">' +
@@ -2459,7 +2546,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var allSt = countsFor(dateKey, null);
     chips += chipHtml('all', '전체', allSt.total, ui.cls === 'all', false)
       .replace('</button>', '<span class="cnt">' + allSt.p + '/' + allSt.total + '</span></button>');
-    // v0.7 — 반 칩도 고정 순서 그대로 (믿음 · 소망 · 사랑 · 은혜 · 새친구). 담임 선생님도 같은 순서로 본다.
+    // v0.7 — 반 칩도 반 목록 순서 그대로. 담임 선생님도 같은 순서로 본다 (v1.6: ▲▼ 순서)
     data.classes.forEach(function (c) {
       var st = countsFor(dateKey, c.id);
       var locked = !canEdit(t, c.id);
@@ -2541,7 +2628,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<button class="add-btn" data-action="new-friend">+ 새친구 등록</button>'
       : '';
 
-    return dateBar + chips + summary + rosterHtml(t, cls) + readOnly + bStrip + gradStripHtml() +
+    return noticeHtml() + dateBar + chips + summary + rosterHtml(t, cls) + readOnly + bStrip + gradStripHtml() +
       '<div class="section-title">출석 명단 <small>' + esc(fmtLong(dateKey)) + ' ' + fmtWk(dateKey) + '</small></div>' +
       list + addBtn;
   }
@@ -2913,13 +3000,44 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function adminHtml(t) {
     if (t.role !== 'admin') return '';
 
+    /* 0) v1.6 — 앱 기본 설정 · 졸업 기준 (관리자가 직접) */
+    var st = settingsOf();
+    var monthOpts = '';
+    for (var mm = 1; mm <= 12; mm++) {
+      monthOpts += '<option value="' + mm + '"' + (mm === st.gradMonth ? ' selected' : '') + '>' + mm + '월</option>';
+    }
+    var ageOpts = '';
+    for (var aa = 3; aa <= 8; aa++) {
+      ageOpts += '<option value="' + aa + '"' + (aa === st.gradAge ? ' selected' : '') + '>만 ' + aa + '세</option>';
+    }
+    var exBirth = (new Date().getFullYear() - st.gradAge) + '-03-15';
+    var exGrad = autoGraduation(exBirth);
+    var settingsBlock =
+      '<div class="section-title">앱 기본 설정 <small>제목 · 공지 · 졸업 기준</small></div>' +
+      '<div class="card admin-class">' +
+        '<form id="appSettingsForm" novalidate>' +
+          '<label class="field"><span>부서 · 앱 제목 <em>필수</em></span>' +
+            '<input class="input" name="title" type="text" autocomplete="off" maxlength="30" value="' + esc(st.title) + '" placeholder="예: 런던순복음교회 유아부"></label>' +
+          '<label class="field" style="margin-bottom:7px"><span>교사 한 줄 공지 <em>비우면 숨김</em></span>' +
+            '<input class="input" name="notice" type="text" autocomplete="off" maxlength="80" value="' + esc(st.notice) + '" placeholder="예: 이번 주는 11시에 단체 사진을 찍어요"></label>' +
+          '<div class="set-grid">' +
+            '<label class="field"><span>졸업 기준 월</span><select class="select" name="gradMonth">' + monthOpts + '</select></label>' +
+            '<label class="field"><span>기준 나이</span><select class="select" name="gradAge">' + ageOpts + '</select></label>' +
+          '</div>' +
+          '<div class="set-example">🎓 지금 기준(만 ' + esc(st.gradAge) + '세 · ' + esc(st.gradMonth) + '월)이면 ' + esc(fmtDot(exBirth)) + '생은 ' + esc(fmtDot(exGrad)) + '에 졸업해요</div>' +
+          '<div class="form-error" id="asError" hidden></div>' +
+          '<button type="submit" class="btn primary" style="width:100%">저장</button>' +
+        '</form>' +
+        '<div class="field-hint" style="margin:0">제목은 머리글과 로그인 화면에, 공지는 <b>출석 화면 맨 위 한 줄 배너</b>로 보여요. 졸업 기준을 바꾸면 모든 아이의 졸업예정일이 바로 다시 계산돼요(직접 지정한 아이는 그대로).</div>' +
+      '</div>';
+
     /* 1) 선생님 명단 — 추가 · 수정 · 삭제 */
     var sorted = data.teachers.slice().sort(function (a, b) {
       function rank(x) {
         var ids = x.classIds || [];
         var best = 99;
         ids.forEach(function (id) {
-          var i = CLASS_ORDER.indexOf(id);
+          var i = classRank(id);
           if (i >= 0 && i < best) best = i;
         });
         return best;
@@ -2960,11 +3078,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<div class="field-hint" style="margin:0">⠿ 손잡이를 끌어 <b>반 관리의 반 카드</b>나 끌 때 화면 아래 뜨는 <b>반 이름 칩</b>에 놓으면 그 반 담당으로 바로 바뀌어요 (PC 마우스·핸드폰·아이폰 모두).</div>' +
       '</div>' +
       '<div class="mg-list">' + teacherRows + '</div>' +
-      '<div class="data-note" style="padding:0 4px">선생님이 15명이어도 로그인 화면에는 반 카드 5개만 보입니다. 선생님은 이름 대신 <b>반으로 입장</b>하고, 명단은 출석 화면의 <b>담당 선생님 명단</b>에서 모두 볼 수 있어요.</div>';
+      '<div class="data-note" style="padding:0 4px">선생님이 15명이어도 로그인 화면에는 반 카드만 보입니다 (지금 ' + data.classes.length + '개 반). 선생님은 이름 대신 <b>반으로 입장</b>하고, 명단은 출석 화면의 <b>담당 선생님 명단</b>에서 모두 볼 수 있어요.</div>';
 
     /* 2) 반 관리 — 이름 · PIN · 잠금 */
     var classBlock =
-      '<div class="section-title">반 관리 <small>이름 · 소개 · PIN</small></div>' +
+      '<div class="section-title">반 관리 <small>추가 · 순서 · 이름 · PIN · 삭제</small></div>' +
       '<div class="switch-row">' +
         '<div class="sw-txt"><b>반별 비밀번호 잠금</b><small>' +
           (data.classPinEnabled
@@ -2974,7 +3092,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<button type="button" class="switch" role="switch" aria-checked="' + (data.classPinEnabled ? 'true' : 'false') + '"' +
           ' aria-label="반별 비밀번호 잠금" data-action="toggle-classpin"></button>' +
       '</div>' +
-      data.classes.map(function (c) {
+      '<div class="class-add-row"><button class="add-btn" data-action="class-add">+ 반 추가</button></div>' +
+      data.classes.map(function (c, ci) {
         var meta = classMeta(c.id);
         var ts = teachersOfClass(c.id);
         return '<div class="card admin-class" data-drop-class="' + c.id + '">' +
@@ -2984,12 +3103,16 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
             '<span class="age">' + (c.desc ? esc(c.desc) + ' · ' : '') + kidsOf(c.id).length + '명</span>' +
           '</div>' +
           '<div class="admin-row tools">' +
+            '<button class="mini-btn icon" data-action="class-up" data-class="' + c.id + '"' + (ci === 0 ? ' disabled' : '') + ' aria-label="' + esc(c.name) + ' 순서를 위로" title="위로">▲</button>' +
+            '<button class="mini-btn icon" data-action="class-down" data-class="' + c.id + '"' + (ci === data.classes.length - 1 ? ' disabled' : '') + ' aria-label="' + esc(c.name) + ' 순서를 아래로" title="아래로">▼</button>' +
             '<button class="mini-btn" data-action="class-rename" data-class="' + c.id + '">✏️ 반 정보 수정</button>' +
             '<button class="mini-btn" data-action="class-pin" data-class="' + c.id + '">🔑 PIN ' + esc(c.pin) + '</button>' +
+            '<button class="mini-btn del" data-action="class-del" data-class="' + c.id + '"' + (data.classes.length <= 1 ? ' disabled' : '') + '>🗑 삭제</button>' +
           '</div>' +
           '<div class="class-teachers">담당 선생님 · ' + esc(ts.length ? ts.map(function (x) { return x.name; }).join(' · ') : '미배정') + '</div>' +
         '</div>';
-      }).join('');
+      }).join('') +
+      '<div class="data-note" style="padding:0 4px">▲▼로 반 순서를 바꾸면 로그인 카드·반 칩·출석·통계가 모두 그 순서를 따라요. 반을 지울 때 안에 아이나 선생님이 있으면 <b>옮길 반을 골라 옮긴 뒤</b> 지울 수 있어요. 반이 하나뿐일 때는 지울 수 없어요.</div>';
 
     /* 3) 관리자 — 하나의 계정 · 관리자 비밀번호(PIN) 변경 (v0.8) */
     var adminNow = data.admins[0] || { pin: DEFAULT_ADMIN_PIN };
@@ -3030,7 +3153,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           esc(c.name) + '<span>' + kids.length + '명</span></div>' + rows + '</div>';
     }).join('');
 
-    return teachersBlock +
+    return settingsBlock + teachersBlock +
       classBlock +
       '<div class="section-title">아이 반 이동 <small>끌어서 옮기거나 반을 고르세요</small></div>' +
       '<div class="data-note" style="padding:0 4px 2px">⠿ <b>손잡이를 끌어 다른 반에 놓으면</b> 그 반으로 바로 옮겨지고 서버에도 바로 저장돼요 (PC 마우스·안드로이드·아이폰 공통). 끌면 화면 아래에 <b>반 이름 칩</b>이 떠서 반 카드까지 안 내려가도 그 칩에 놓으면 돼요. 아래 반 선택으로 옮겨도 같은 기록이 돼요.</div>' +
@@ -3531,7 +3654,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var gTxt = g
       ? esc(fmtDot(g)) + (gd != null ? ' · ' + esc(gradShortText(gd)) : '') +
         '<span class="info-hint">' + (isManualGrad(c) ? '직접 지정한 날짜' : '생년월일로 자동 계산') +
-        ' · 영국 학년 9월 시작 · 유아부 졸업(초등 입학)</span>'
+        ' · 영국 학년 ' + settingsOf().gradMonth + '월 시작 · 유아부 졸업(초등 입학)</span>'
       : '<span class="muted">생일 정보 없음</span>';
     return '<div class="info-list">' +
       infoRow('이번 주일', esc(fmtMD(base)) + ' · ' + esc(lastTxt)) +
@@ -3962,6 +4085,160 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     closeModal();
     render();
     toast(before === c.name ? '반 정보를 저장했어요' : before + ' → ' + c.name + '으로 바꿨어요');
+  }
+
+  /* ---------- v1.6 — 반 추가 · 순서 · 삭제 (관리자) ---------- */
+  function openClassAddForm() {
+    if (!adminOnly()) return;
+    editState = { kind: 'classadd' };
+    openModal(
+      '<div class="modal-head"><div><h3>반 추가</h3>' +
+        '<p>새 반을 만들고 순서는 ▲▼로 바꿀 수 있어요</p></div>' +
+        '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button></div>' +
+      '<form id="classAddForm" novalidate>' +
+        '<label class="field"><span>반 이름 <em>필수</em></span>' +
+          '<input class="input" name="name" type="text" autocomplete="off" maxlength="12" placeholder="예: 기쁨반"></label>' +
+        '<label class="field"><span>반 소개 <em>선택 · 한 줄</em></span>' +
+          '<input class="input" name="desc" type="text" autocomplete="off" maxlength="40" placeholder="필요할 때만 (비우면 안 보여요)"></label>' +
+        '<div class="field-hint">반을 만들면 로그인 카드·출석·통계에 바로 나오고, 모든 선생님 기기에 함께 저장돼요. PIN은 1111로 시작하고 <b>🔑 PIN</b>에서 바꿀 수 있어요.</div>' +
+        '<div class="form-error" id="caError" hidden></div>' +
+        '<div class="modal-actions">' +
+          '<button type="button" class="btn ghost" data-action="modal-close">취소</button>' +
+          '<button type="submit" class="btn primary">추가</button>' +
+        '</div>' +
+      '</form>'
+    );
+    setTimeout(function () {
+      var n = document.querySelector('#classAddForm input[name="name"]');
+      if (n) n.focus();
+    }, 120);
+  }
+  function submitClassAddForm(form) {
+    if (!adminOnly()) { closeModal(); return; }
+    var fd = new FormData(form);
+    var name = String(fd.get('name') || '').trim();
+    var errEl = document.getElementById('caError');
+    function fail(msg) { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } }
+    if (!name) { fail('반 이름을 입력해 주세요.'); return; }
+    if (data.classes.some(function (x) { return x.name === name; })) { fail('같은 이름의 반이 이미 있어요.'); return; }
+    var pal = CLASS_PALETTE[data.classes.length % CLASS_PALETTE.length];
+    var fresh = {
+      id: 'c' + Date.now().toString(36),
+      name: name.slice(0, 12),
+      desc: String(fd.get('desc') || '').trim().slice(0, 40),
+      pin: '1111',
+      color: pal.color, soft: pal.soft, emoji: pal.emoji
+    };
+    // 새친구반은 '기다리는 반'이라 맨 뒤에 두고, 새 반은 그 앞에 넣는다
+    var nf = data.classes.map(function (x) { return x.id; }).indexOf(NEW_FRIEND_CLASS);
+    if (nf >= 0) data.classes.splice(nf, 0, fresh);
+    else data.classes.push(fresh);
+    save();
+    closeModal();
+    render();
+    toast(fresh.name + '을(를) 추가했어요 · 순서는 ▲▼로 바꿔요');
+  }
+  function moveClass(classId, dir) {
+    if (!adminOnly()) return;
+    var i = classRank(classId);
+    if (i < 0) return;
+    var j = i + dir;
+    if (j < 0 || j >= data.classes.length) return;
+    var arr = data.classes.slice();
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    data.classes = arr;
+    save();
+    render();
+  }
+  // 반을 지울 때 — 아이·선생님이 있으면 '옮길 반'을 골라 옮긴 뒤 지운다
+  function deleteClassFlow(classId) {
+    if (!adminOnly()) return;
+    var c = classById(classId);
+    if (!c) return;
+    if (data.classes.length <= 1) { toast('반이 하나뿐일 때는 지울 수 없어요.'); return; }
+    var kidsN = kidsOf(classId).length;
+    var tsN = teachersOfClass(classId).length;
+    if (!kidsN && !tsN) {
+      openConfirm(c.name + '을(를) 지울까요?',
+        c.name + '에는 아이도 선생님도 없어요. 이 반을 목록에서 지웁니다. 출석·기도 기록은 그대로 남아요.',
+        function () { removeClassNow(classId); }, '삭제');
+      return;
+    }
+    editState = { kind: 'classdel', id: classId };
+    var opts = data.classes.filter(function (x) { return x.id !== classId; }).map(function (x) {
+      return '<option value="' + x.id + '">' + esc(x.name) + '</option>';
+    }).join('');
+    openModal(
+      '<div class="modal-head"><div><h3>' + esc(c.name) + ' 삭제</h3>' +
+        '<p>아이 ' + kidsN + '명 · 선생님 ' + tsN + '명이 아직 있어요</p></div>' +
+        '<button class="x-btn" data-action="modal-close" aria-label="닫기">✕</button></div>' +
+      '<p class="confirm-body">' + esc(c.name) + '을(를) 지우려면 그 안의 아이와 선생님을 다른 반으로 먼저 옮겨야 해요. 아래에서 옮길 반을 골라 주세요.</p>' +
+      '<form id="classDelForm" novalidate>' +
+        '<label class="field"><span>옮길 반 <em>필수</em></span><select class="select" name="toClass">' + opts + '</select></label>' +
+        '<div class="field-hint">아이의 출석·기도 기록은 그대로 따라가고, ' + esc(c.name) + '만 목록에서 사라져요.</div>' +
+        '<div class="modal-actions">' +
+          '<button type="button" class="btn ghost" data-action="modal-close">취소</button>' +
+          '<button type="submit" class="btn primary">옮기고 삭제</button>' +
+        '</div>' +
+      '</form>'
+    );
+  }
+  function submitClassDelForm(form) {
+    if (!adminOnly() || !editState || editState.kind !== 'classdel') { closeModal(); return; }
+    var id = editState.id;
+    var c = classById(id);
+    var to = String(new FormData(form).get('toClass') || '');
+    if (!c || !classById(to) || to === id) { closeModal(); return; }
+    var moved = 0;
+    data.children.forEach(function (k) {
+      if (k.classId !== id) return;
+      k.classId = to;
+      moved++;
+    });
+    data.teachers.forEach(function (x) {
+      var list = x.classIds || [];
+      var i = list.indexOf(id);
+      if (i < 0) return;
+      if (list.indexOf(to) >= 0) list.splice(i, 1);
+      else list[i] = to;
+    });
+    removeClassNow(id);
+    var msg = c.name + '을(를) 지웠어요';
+    if (moved) msg = moved + '명을 ' + className(to) + '으로 옮기고 ' + c.name + '을(를) 지웠어요';
+    toast(msg);
+  }
+  function removeClassNow(classId) {
+    var c = classById(classId);
+    if (!c) { closeModal(); return; }
+    data.classes = data.classes.filter(function (x) { return x.id !== classId; });
+    if (session && session.kind === 'class' && session.classId === classId) { session = null; saveSession(); }
+    if (ui.cls === classId) ui.cls = 'all';
+    if (ui.pCls === classId) ui.pCls = 'all';
+    save();
+    closeModal();
+    render();
+    toast(c.name + '을(를) 지웠어요');
+  }
+
+  /* ---------- v1.6 — 앱 기본 설정 저장 ---------- */
+  function submitAppSettings(form) {
+    if (!adminOnly()) return;
+    var fd = new FormData(form);
+    var errEl = document.getElementById('asError');
+    function fail(msg) { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } }
+    var title = String(fd.get('title') || '').trim();
+    if (!title) { fail('부서 제목을 입력해 주세요.'); return; }
+    var month = Number(fd.get('gradMonth')) || 9;
+    var age = Number(fd.get('gradAge')) || 5;
+    data.settings = normSettings({
+      title: title,
+      notice: String(fd.get('notice') || '').trim(),
+      gradMonth: month,
+      gradAge: age
+    });
+    save();
+    render();
+    toast('앱 기본 설정을 저장했어요');
   }
 
   /* ---------- 기도제목 ---------- */
@@ -4635,6 +4912,23 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         openClassForm(el.getAttribute('data-class'));
         break;
 
+      /* ---- v1.6 — 반 추가 · 순서 · 삭제 ---- */
+      case 'class-add':
+        openClassAddForm();
+        break;
+
+      case 'class-up':
+        moveClass(el.getAttribute('data-class'), -1);
+        break;
+
+      case 'class-down':
+        moveClass(el.getAttribute('data-class'), 1);
+        break;
+
+      case 'class-del':
+        deleteClassFlow(el.getAttribute('data-class'));
+        break;
+
       case 'toggle-classpin': {
         var tNow = currentTeacher();
         if (!tNow || tNow.role !== 'admin') { toast('관리자(임원)만 바꿀 수 있어요.'); break; }
@@ -4723,6 +5017,15 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     } else if (e.target.id === 'classForm') {
       e.preventDefault();
       submitClassForm(e.target);
+    } else if (e.target.id === 'classAddForm') {
+      e.preventDefault();
+      submitClassAddForm(e.target);
+    } else if (e.target.id === 'classDelForm') {
+      e.preventDefault();
+      submitClassDelForm(e.target);
+    } else if (e.target.id === 'appSettingsForm') {
+      e.preventDefault();
+      submitAppSettings(e.target);
     } else if (e.target.id === 'childForm') {
       e.preventDefault();
       submitChildInfo(e.target);
@@ -4811,7 +5114,9 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       version: data.version,
       className: data.className,
       admins: data.admins || [],
-      classPinEnabled: !!data.classPinEnabled
+      classPinEnabled: !!data.classPinEnabled,
+      // v1.6 — 앱 기본 설정도 meta 한 줄로 함께 간다
+      settings: data.settings || normSettings(null)
     };
     out.classes = data.classes || [];
     out.teachers = data.teachers || [];
@@ -4828,13 +5133,18 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (typeof value.version === 'number') data.version = value.version;
       if (typeof value.className === 'string') data.className = value.className;
       if (typeof value.classPinEnabled === 'boolean') data.classPinEnabled = value.classPinEnabled;
+      if (value.settings) data.settings = normSettings(value.settings);
       return true;
     }
     if (key === 'classes') {
       if (!Array.isArray(value)) return false;
-      // 반은 이름·PIN만 둔다 (예전 저장값에 남아 있던 연령 표시는 버린다)
+      // 반은 이름·소개·PIN(과 새로 만든 반의 색·이모지)만 둔다 (예전 저장값의 연령 표시는 버린다)
       data.classes = orderClasses(value.map(function (c) {
-        return { id: c.id, name: c.name || '반', desc: (typeof c.desc === 'string') ? c.desc.slice(0, 40) : '', pin: normPin(c.pin, CLASS_PINS[c.id] || '1111') };
+        var x = { id: c.id, name: c.name || '반', desc: (typeof c.desc === 'string') ? c.desc.slice(0, 40) : '', pin: normPin(c.pin, CLASS_PINS[c.id] || '1111') };
+        if (typeof c.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.color)) x.color = c.color;
+        if (typeof c.soft === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.soft)) x.soft = c.soft;
+        if (typeof c.emoji === 'string' && c.emoji) x.emoji = c.emoji.slice(0, 4);
+        return x;
       }));
       return true;
     }

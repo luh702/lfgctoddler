@@ -1,2 +1,6 @@
 deploy.sh
 .env.local
+
+# v1.4 — 등록카드 사진 AI 작업용 보조 폴더 (공개 저장소에는 올리지 않는다)
+samples/
+supabase/

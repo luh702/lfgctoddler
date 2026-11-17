@@ -3918,6 +3918,17 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     lastError: '', lastToast: 0
   };
 
+  // 서버(jsonb)는 객체 key 순서를 바꿔 돌려주므로, 비교는 key 순서를 맞춘 문자열로 한다
+  function canon(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v);
+    if (Object.prototype.toString.call(v) === '[object Array]') {
+      return '[' + v.map(canon).join(',') + ']';
+    }
+    return '{' + Object.keys(v).sort().map(function (k) {
+      return JSON.stringify(k) + ':' + canon(v[k]);
+    }).join(',') + '}';
+  }
+
   function syncDeviceId() {
     var id = safeGet(SYNC_DEVICE_KEY);
     if (!id) { id = 'd' + Math.random().toString(36).slice(2, 8); safeSet(SYNC_DEVICE_KEY, id); }
@@ -4000,15 +4011,15 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (sync.revs[key] != null && rev <= sync.revs[key]) return;      // 이미 반영한 차례
       if (force) {
         if (writeRow(key, row.data)) changed = true;
-        sync.base[key] = JSON.stringify(row.data);
+        sync.base[key] = canon(row.data);
         sync.revs[key] = rev;
         return;
       }
       var localValue = rowsFromData()[key];
-      var dirty = sync.base[key] !== JSON.stringify(localValue);          // 이 기기에서 고친 내용이 아직 안 올라갔다
+      var dirty = sync.base[key] !== canon(localValue);          // 이 기기에서 고친 내용이 아직 안 올라갔다
       if (dirty && isWeekKey(key)) {
         writeRow(key, mergeRecords(localValue, row.data, key.indexOf('prayer:') === 0));
-        sync.base[key] = JSON.stringify(row.data);
+        sync.base[key] = canon(row.data);
         sync.revs[key] = rev;
         changed = true;
         schedulePush(120);
@@ -4018,7 +4029,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         schedulePush(120);
       } else {
         if (writeRow(key, row.data)) changed = true;
-        sync.base[key] = JSON.stringify(row.data);
+        sync.base[key] = canon(row.data);
         sync.revs[key] = rev;
       }
     });
@@ -4089,7 +4100,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     try {
       var rows = rowsFromData(), out = {};
       Object.keys(rows).forEach(function (k) {
-        if (sync.base[k] !== JSON.stringify(rows[k])) out[k] = rows[k];
+        if (sync.base[k] !== canon(rows[k])) out[k] = rows[k];
       });
       if (Object.keys(out).length) safeSet(SYNC_PENDING_KEY, JSON.stringify({ at: Date.now(), rows: out }));
       else window.localStorage.removeItem(SYNC_PENDING_KEY);
@@ -4102,7 +4113,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var rows = rowsFromData();
     var up = [], del = [];
     Object.keys(rows).forEach(function (k) {
-      if (sync.base[k] !== JSON.stringify(rows[k])) up.push(k);
+      if (sync.base[k] !== canon(rows[k])) up.push(k);
     });
     Object.keys(sync.base).forEach(function (k) { if (!(k in rows)) del.push(k); });
     if (!up.length && !del.length) {
@@ -4129,7 +4140,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       if (res && res.error) throw new Error(res.error.message || 'upsert failed');
       payload.forEach(function (row) {
         sync.revs[row.key] = row.rev;
-        sync.base[row.key] = JSON.stringify(row.data);
+        sync.base[row.key] = canon(row.data);
       });
       del.forEach(function (k) { delete sync.base[k]; delete sync.revs[k]; });
       try { window.localStorage.removeItem(SYNC_PENDING_KEY); } catch (e) {}

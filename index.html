@@ -612,6 +612,27 @@ h1,h2,h3,h4,p{margin:0}
 .admin-group{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
 .admin-group .ag-head{padding:8px 11px;background:#FCF9F3;border-bottom:1px solid #F3EBDF;font-size:11.5px;font-weight:800;color:var(--ink-soft);display:flex;gap:6px;align-items:center}
 .admin-group .ag-head span{margin-left:auto;color:var(--muted);font-weight:700}
+/* v1.1 — 관리자 드래그 이동 (Pointer Events · PC 마우스·손가락 공통) */
+.drag-handle{
+  flex:0 0 auto;width:30px;height:34px;display:grid;place-items:center;
+  border:0;background:transparent;color:#C6B8AC;font-size:15px;line-height:1;
+  border-radius:9px;cursor:grab;touch-action:none;padding:0;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+.drag-handle:active{cursor:grabbing;background:#F3EBDF;color:#8A7868}
+.drag-handle:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+body.dnd-on,body.dnd-on *{-webkit-user-select:none;user-select:none}
+body.dnd-on .drag-handle{cursor:grabbing}
+.dnd-src{opacity:.4}
+.dnd-over{outline:2px dashed var(--primary);outline-offset:3px;background:var(--primary-soft)}
+.dnd-ghost{
+  position:fixed;z-index:99999;pointer-events:none;transform:translate(-50%,-140%);
+  max-width:66vw;padding:7px 12px;border-radius:12px;
+  background:#FFFDF9;border:1px solid #E3D6C7;box-shadow:0 10px 24px rgba(74,60,51,.22);
+  font-size:12px;font-weight:800;color:#4A3C33;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.dnd-ghost small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);margin-top:1px;letter-spacing:-.1px}
 .danger-btn{
   width:100%;padding:13px;border-radius:14px;border:1px solid #F0D8DA;background:#FDF3F4;
   color:#B25A60;font-size:12.5px;font-weight:800;
@@ -780,7 +801,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 8;             // v0.9 — 선생님 개인 로그인 없이 '반'으로 입장 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.1';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.2';   // 화면에 보이는 시범용 버전
 
   var NEW_FRIEND_CLASS = 'newkids';   // 새친구반 — 유아부에 처음 와서 적응하는 반
 
@@ -2621,6 +2642,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var teacherRows = sorted.length ? sorted.map(function (x) {
       var where = (x.classIds || []).length ? (x.classIds || []).map(className).join(' · ') : '미배정';
       return '<div class="mg-row">' +
+        '<button type="button" class="drag-handle" data-drag="teacher" data-id="' + x.id + '" aria-label="' + esc(x.name) + ' 선생님 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
         '<span class="avatar sm" style="background:var(--bg-soft);color:var(--ink-soft)">' + esc(x.name.charAt(0)) + '</span>' +
         '<span class="who"><b>' + esc(x.name) + '</b><small>' + esc(where) + (x.phone ? ' · ' + esc(x.phone) : '') + '</small></span>' +
         '<button class="mini-btn" data-action="teacher-edit" data-teacher="' + x.id + '">수정</button>' +
@@ -2645,6 +2667,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<div class="form-error" id="taError" hidden></div>' +
         '</form>' +
         '<div class="field-hint" style="margin:0">이름과 담당 반을 고르고 <b>추가</b>를 누르면 명단에 바로 들어가요. 관두신 선생님은 <b>삭제</b>로 빼면 돼요.</div>' +
+        '<div class="field-hint" style="margin:0">⠿ 손잡이를 끌어 <b>반 관리의 반 카드</b>에 놓으면 그 반 담당으로 바로 바뀌어요 (PC·터치 모두).</div>' +
       '</div>' +
       '<div class="mg-list">' + teacherRows + '</div>' +
       '<div class="data-note" style="padding:0 4px">선생님이 15명이어도 로그인 화면에는 반 카드 5개만 보입니다. 선생님은 이름 대신 <b>반으로 입장</b>하고, 명단은 출석 화면의 <b>담당 선생님 명단</b>에서 모두 볼 수 있어요.</div>';
@@ -2664,7 +2687,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       data.classes.map(function (c) {
         var meta = classMeta(c.id);
         var ts = teachersOfClass(c.id);
-        return '<div class="card admin-class">' +
+        return '<div class="card admin-class" data-drop-class="' + c.id + '">' +
           '<div class="ac-head">' +
             '<span class="dot" style="background:' + meta.color + '"></span>' +
             '<span>' + esc(c.name) + '</span>' +
@@ -2706,19 +2729,21 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           return '<option value="' + x.id + '"' + (x.id === k.classId ? ' selected' : '') + '>' + esc(x.name) + '</option>';
         }).join('');
         return '<div class="move-row">' +
+          '<button type="button" class="drag-handle" data-drag="child" data-id="' + k.id + '" aria-label="' + esc(k.name) + ' 어린이 끌어서 반 이동" title="끌어서 반 이동">⠿</button>' +
           avatarButtonHtml(k, 'sm', '사진과 정보 열기', true) +
           '<div class="nm">' + esc(k.name) + '<small>' + ageText(monthsBetween(k.birth, todayISO())) + '</small></div>' +
           '<select class="select" data-action="move-child" data-child="' + k.id + '" aria-label="' + esc(k.name) + ' 반 이동">' + opts2 + '</select>' +
         '</div>';
       }).join('');
-      return '<div class="admin-group" style="margin-top:8px">' +
+      return '<div class="admin-group" data-drop-class="' + c.id + '" style="margin-top:8px">' +
         '<div class="ag-head"><span class="dot" style="width:8px;height:8px;border-radius:99px;background:' + classMeta(c.id).color + '"></span>' +
           esc(c.name) + '<span>' + kids.length + '명</span></div>' + rows + '</div>';
     }).join('');
 
     return teachersBlock +
       classBlock +
-      '<div class="section-title">아이 반 이동 <small>반을 바꾸면 명단·통계에 바로 반영</small></div>' +
+      '<div class="section-title">아이 반 이동 <small>끌어서 옮기거나 반을 고르세요</small></div>' +
+      '<div class="data-note" style="padding:0 4px 2px">⠿ <b>손잡이를 끌어 다른 반에 놓으면</b> 그 반으로 바로 옮겨지고 서버에도 바로 저장돼요 (PC 마우스·핸드폰 터치 공통). 아래 반 선택으로 옮겨도 같은 기록이 돼요.</div>' +
       '<div class="data-note" style="padding:0 4px 2px">🐣 <b>새친구반</b>은 새로 온 친구가 적응하는 반이에요. 적응이 끝나면 아래 목록에서 반을 골라 주세요. 아이를 명단에서 빼려면 동그란 사진을 눌러 정보 창에서 <b>아이 삭제</b>를 누르면 돼요.</div>' +
       moveGroups +
       adminBlock +
@@ -3527,6 +3552,128 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     });
   }
 
+  /* ---------- v1.1 — 아이·선생님 끌어서 반 이동 (Pointer Events: PC 마우스 + 손가락) ---------- */
+  var dnd = { on: false, kind: null, id: null, handle: null, row: null, ghost: null, over: null, pid: null, sx: 0, sy: 0, label: '', sub: '' };
+
+  // 떨어뜨릴 수 있는 곳인가 — 선생님은 '반 관리'의 반 카드, 아이는 반 카드와 반별 명단 그룹 모두
+  function dndAllowed(el) {
+    if (!el || !el.getAttribute || !el.getAttribute('data-drop-class')) return false;
+    if (dnd.kind === 'teacher') return el.classList.contains('admin-class');
+    return true;
+  }
+
+  function dndZoneAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    while (el && el !== document.body) {
+      if (el.getAttribute && el.getAttribute('data-drop-class')) return dndAllowed(el) ? el : null;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function dndStart(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var handle = (e.target && e.target.closest) ? e.target.closest('[data-drag]') : null;
+    if (!handle) return;
+    var t = currentTeacher();
+    if (!t || t.role !== 'admin') return;
+    var kind = handle.getAttribute('data-drag');
+    var id = handle.getAttribute('data-id');
+    if (!kind || !id) return;
+    if (kind === 'child') {
+      var k = childById(id);
+      if (!k) return;
+      dnd.label = k.name;
+      dnd.sub = '다른 반에 놓으면 바로 이동';
+    } else {
+      var tr = teacherById(id);
+      if (!tr) return;
+      dnd.label = tr.name + ' 선생님';
+      dnd.sub = '반 카드에 놓으면 담당 반 변경';
+    }
+    dnd.kind = kind; dnd.id = id; dnd.handle = handle;
+    dnd.row = handle.closest('.move-row') || handle.closest('.mg-row');
+    dnd.sx = e.clientX; dnd.sy = e.clientY; dnd.pid = e.pointerId; dnd.on = false;
+    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    handle.addEventListener('pointermove', dndMove);
+    handle.addEventListener('pointerup', dndEnd);
+    handle.addEventListener('pointercancel', dndCancel);
+  }
+
+  function dndMove(e) {
+    if (dnd.pid !== e.pointerId || !dnd.handle) return;
+    var dx = e.clientX - dnd.sx, dy = e.clientY - dnd.sy;
+    if (!dnd.on) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;   // 손가락이 조금 움직이기 전엔 그냥 누름
+      dnd.on = true;
+      document.body.classList.add('dnd-on');
+      if (dnd.row) dnd.row.classList.add('dnd-src');
+      dnd.ghost = document.createElement('div');
+      dnd.ghost.className = 'dnd-ghost';
+      dnd.ghost.innerHTML = esc(dnd.label) + '<small>' + esc(dnd.sub) + '</small>';
+      document.body.appendChild(dnd.ghost);
+    }
+    e.preventDefault();
+    dnd.ghost.style.left = e.clientX + 'px';
+    dnd.ghost.style.top = e.clientY + 'px';
+    var zone = dndZoneAt(e.clientX, e.clientY);
+    if (zone !== dnd.over) {
+      if (dnd.over) dnd.over.classList.remove('dnd-over');
+      dnd.over = zone;
+      if (zone) zone.classList.add('dnd-over');
+    }
+    // 화면 가장자리에서 자동 스크롤 — 목록이 길어도 손가락으로 끌고 넘길 수 있게
+    var edge = 72;
+    if (e.clientY < edge) window.scrollBy(0, -14);
+    else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
+  }
+
+  function dndEnd(e) {
+    if (dnd.pid !== e.pointerId) return;
+    var wasOn = dnd.on;
+    var zone = wasOn ? dndZoneAt(e.clientX, e.clientY) : null;
+    var classId = zone ? zone.getAttribute('data-drop-class') : null;
+    var kind = dnd.kind, id = dnd.id;
+    dndCleanup();
+    if (!wasOn || !classId) return;
+    if (kind === 'child') moveChild(id, classId);
+    else moveTeacher(id, classId);
+  }
+
+  function dndCancel(e) {
+    if (dnd.pid !== e.pointerId) return;
+    dndCleanup();
+  }
+
+  function dndCleanup() {
+    if (dnd.handle) {
+      try { dnd.handle.releasePointerCapture(dnd.pid); } catch (err) {}
+      dnd.handle.removeEventListener('pointermove', dndMove);
+      dnd.handle.removeEventListener('pointerup', dndEnd);
+      dnd.handle.removeEventListener('pointercancel', dndCancel);
+    }
+    if (dnd.ghost && dnd.ghost.parentNode) dnd.ghost.parentNode.removeChild(dnd.ghost);
+    if (dnd.over) dnd.over.classList.remove('dnd-over');
+    if (dnd.row) dnd.row.classList.remove('dnd-src');
+    document.body.classList.remove('dnd-on');
+    dnd.on = false; dnd.handle = null; dnd.row = null; dnd.ghost = null;
+    dnd.over = null; dnd.pid = null; dnd.kind = null; dnd.id = null;
+  }
+
+  // 선생님을 반 카드에 놓으면 그 반 담당으로 (여러 반은 [수정]에서 체크)
+  function moveTeacher(teacherId, classId) {
+    if (!adminOnly()) return;
+    var tr = teacherById(teacherId), c = classById(classId);
+    if (!tr || !c) return;
+    var cur = (tr.classIds || []).slice();
+    if (cur.length === 1 && cur[0] === classId) { toast(tr.name + ' 선생님은 이미 ' + c.name + '이에요'); return; }
+    var before = cur.length ? cur.map(className).join(' · ') : '미배정';
+    tr.classIds = [classId];
+    save();
+    render();
+    toast(tr.name + ' 선생님을 ' + before + '에서 ' + c.name + '으로 옮겼어요');
+  }
+
   function moveChild(childId, classId) {
     if (!adminOnly()) return;
     var c = data.children.filter(function (x) { return x.id === childId; })[0];
@@ -3839,6 +3986,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   });
 
   // 메모 입력 — 리렌더 없이 저장 (포커스 유지)
+  document.addEventListener('pointerdown', dndStart, { passive: true });
+
   document.addEventListener('input', function (e) {
     var el = e.target;
     if (!el || !el.getAttribute) return;

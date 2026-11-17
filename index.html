@@ -2719,7 +2719,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       adminBlock +
       '<div class="section-title">데이터</div>' +
       '<div class="card" style="padding:13px 14px">' +
-        '<div class="data-note" style="margin-bottom:11px">이 기기 브라우저에만 저장됩니다. 실제 서비스에서는 구글 시트/서버에 쌓여 선생님들 폰에서 함께 보여요.</div>' +
+        '<div class="data-note" style="margin-bottom:11px">출석·원아·선생님·기도제목은 <b>함께 쓰는 서버(Supabase)</b>에 저장돼 선생님들 폰에서 바로 같이 보여요. 서버에 못 올린 내용은 이 기기에 남아 있다가 연결되면 자동으로 다시 올라갑니다.</div>' +
         '<button class="danger-btn" data-action="reset-data">샘플 데이터로 초기화</button>' +
       '</div>' +
       '<div class="data-note">선생님 ' + data.teachers.length + '명 · ' +
@@ -2937,7 +2937,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   }
   function photoHintText(photo) {
     return photo
-      ? '약 ' + photoKb(photo) + 'KB · 이 기기에만 저장돼요'
+      ? '약 ' + photoKb(photo) + 'KB · 모든 기기에서 함께 보여요'
       : '동그린 얼굴 사진이 좋아요 · 자동으로 160px로 줄여 저장해요';
   }
   function photoToolsInner(photo) {
@@ -3546,7 +3546,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
   function resetData() {
     openConfirm('샘플 데이터로 초기화할까요?',
-      '이 기기에 저장된 출석·아이 사진·새친구·반 배정 기록이 모두 지워지고 처음 샘플 상태로 돌아가요.',
+      '출석·아이 사진·새친구·반 배정 기록이 모두 지워지고 처음 샘플 상태로 돌아가요. 지금은 자료를 함께 쓰므로 선생님 모든 기기에 똑같이 적용돼요.',
       function () {
         data = seedData();
         save();

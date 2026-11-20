@@ -35,6 +35,8 @@
           졸업 기준(월·나이) 설정 · 모두 app_state(meta)로 모든 기기에 바로 반영
    v1.7 — 명단 일괄 선택 삭제(관리자 · 출석 탭 ☑️ 선택) · 선생님 생일(월·일만) 등록과
           이번 달 생일 모아보기(관리 카드 · 출석 스트립 · 생일 탭) — teachers 행 birthday
+   v1.8 — 명단 일괄 정리(선택 삭제)를 출석 탭에서 관리 탭으로 옮김 — 출석 화면은 출석 체크만
+          관리 탭 '명단 정리'에서 반별 필터·체크·전체 선택/해제·선택 삭제
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -635,20 +637,24 @@ h1,h2,h3,h4,p{margin:0}
 .bday-strip.t-strip .bday-txt b{color:#8E5A7C}
 .bday-strip.t-strip .bday-txt small{color:#A9798F}
 
-/* ---------------- v1.7 — 명단 일괄 선택 삭제 ---------------- */
-.sel-btn.on{background:var(--primary-soft);border-color:#F1DAC6;color:var(--primary-dark)}
-.sel-note{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:13px;background:#FDF4F5;border:1px dashed #F0D8DA;color:#966A6A;font-size:11.5px;font-weight:600;line-height:1.5;word-break:keep-all}
-.sel-row{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-top:7px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-sm);cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* ---------------- v1.8 — 명단 정리 (관리 탭 · 일괄 선택 삭제) ---------------- */
+.mg-card{padding:12px 12px 8px;display:flex;flex-direction:column;gap:9px}
+.mg-chips{padding:0}
+.mg-scroll{max-height:min(46vh,400px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:1px 1px 3px}
+.mg-gh{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--muted);padding:7px 3px 1px}
+.mg-gh i{width:8px;height:8px;border-radius:99px;display:block;flex:0 0 auto}
+.mg-gh span{margin-left:auto;font-weight:700}
+.mg-empty{font-size:11.5px;color:var(--muted);font-weight:700;padding:9px 4px;text-align:center}
+.sel-row{display:flex;align-items:center;gap:10px;padding:10px 11px;margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow-sm);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .sel-row.on{background:linear-gradient(0deg,#FDF3EE,#FFFFFF);border-color:#F1DAC6}
 .sel-box{width:27px;height:27px;border-radius:9px;border:1.5px solid #DCC9B4;background:#fff;display:grid;place-items:center;font-size:14px;font-weight:800;color:#fff;flex:0 0 auto}
 .sel-row.on .sel-box{background:var(--primary);border-color:var(--primary)}
-.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(58px + env(safe-area-inset-bottom));width:100%;max-width:480px;z-index:26;display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(90,60,40,.10)}
-.selbar-all{flex:0 0 auto;height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:#FFFDF9;font-size:12px;font-weight:800;color:var(--ink-soft)}
-.selbar-cnt{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
-.selbar-cnt b{font-size:14px;color:var(--primary-dark)}
-.selbar-del{flex:0 0 auto;height:44px;padding:0 16px;border-radius:12px;background:#B25A60;color:#fff;font-size:12.5px;font-weight:800}
-.selbar-del:disabled{opacity:.34}
-.view.sel-mode{padding-bottom:188px}
+.mg-bar{display:flex;align-items:center;gap:8px;padding-top:9px;border-top:1px solid var(--line)}
+.mg-all{flex:0 0 auto;height:44px;padding:0 13px;border-radius:12px;border:1px solid var(--line);background:#FFFDF9;font-size:12px;font-weight:800;color:var(--ink-soft)}
+.mg-cnt{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
+.mg-cnt b{font-size:14px;color:var(--primary-dark)}
+.mg-del{flex:0 0 auto;height:44px;padding:0 15px;border-radius:12px;background:#B25A60;color:#fff;font-size:12.5px;font-weight:800}
+.mg-del:disabled{opacity:.34}
 
 /* ---------------- 통계 ---------------- */
 .stat-hero{display:flex;align-items:center;gap:15px;padding:15px}
@@ -978,7 +984,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 9;             // v1.6 — 관리자가 앱 설정·반 목록을 직접 바꾼다 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.7';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.8';   // 화면에 보이는 시범용 버전
 
   // v1.6 — 앱 기본 설정 (관리 탭에서 바꾸고, meta 행으로 모든 기기에 함께 간다)
   var DEFAULT_TITLE = '런던순복음교회 유아부';
@@ -1120,8 +1126,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     gradOpen: true,            // v1.5 — 졸업 예정자 모아보기 펼침
     gradPastOpen: false,       // v1.5 — 지난 졸업 대상까지 보기
     bMonth: null,              // { y, m }
-    selMode: false,            // v1.7 — 관리자: 명단 일괄 선택 삭제 모드
-    selIds: {}                 // v1.7 — 선택한 아이 id
+    mgCls: 'all',              // v1.8 — 관리 탭 명단 정리의 반 필터 ('all' | classId)
+    selIds: {}                 // v1.8 — 관리 탭에서 지울 아이로 체크한 id
   };
 
   /* =========================================================
@@ -1285,27 +1291,24 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return '<div class="card tbd-card">' + head + body + '</div>';
   }
 
-  /* ---------- v1.7 — 명단 일괄 선택 삭제 ---------- */
-  function selModeOn() {
-    var t = currentTeacher();
-    return !!(ui.selMode && t && t.role === 'admin');
-  }
-  function resetSel() { ui.selMode = false; ui.selIds = {}; }
+  /* ---------- v1.8 — 명단 정리 (관리 탭 · 일괄 선택 삭제) ---------- */
+  function resetSel() { ui.selIds = {}; }
   function selCount() {
     var n = 0;
     Object.keys(ui.selIds || {}).forEach(function (id) { if (ui.selIds[id] && childById(id)) n++; });
     return n;
   }
-  function visibleChildIds() {
-    var visible = ui.cls === 'all' ? data.classes : data.classes.filter(function (c) { return c.id === ui.cls; });
+  // 관리 탭 정리는 그 반 아이를 입교일과 상관없이 모두 보여 준다 (지난주 이후 등록한 아이도 지울 수 있게)
+  function mgVisibleChildIds() {
+    var visible = ui.mgCls === 'all' ? data.classes : data.classes.filter(function (c) { return c.id === ui.mgCls; });
     var out = [];
     visible.forEach(function (c) {
-      kidsOf(c.id, ui.date).forEach(function (k) { out.push(k.id); });
+      kidsOf(c.id).forEach(function (k) { out.push(k.id); });
     });
     return out;
   }
   function selAllOn() {
-    var ids = visibleChildIds();
+    var ids = mgVisibleChildIds();
     if (!ids.length) return false;
     for (var i = 0; i < ids.length; i++) if (!ui.selIds[ids[i]]) return false;
     return true;
@@ -2134,8 +2137,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (d < 21) return '온 지 ' + d + '일째';
     return '온 지 ' + Math.max(1, Math.round(d / 7)) + '주째';
   }
-  // 영국 학년은 9월 1일 시작 — (9/1 Y ~ 8/31 Y+1) 출생 → 유아부 졸업(Reception 시작)은 Y+5년 9월 1일
+  // 영국 학기 시작은 기준 월(기본 9월) 1일 — 아이는 '졸업 기준 나이'(기본 만 5세)가 된 뒤
+  //  처음 오는 기준 월 1일에 유아부를 졸업한다. (예: 2021년 10월생 → 만 5세 2026-10 → 2027-09-01)
   // v1.6 — 학기 시작 월과 기준 나이는 관리 탭 '졸업 기준'에서 바꾼다 (기본: 9월 · 만 5세)
+  // v1.8 — 이미 지난 학기(예: 2026년 9월)를 '졸업 예정'으로 보여 주지 않는다.
+  //  계산된 날이 지났으면 다가오는 다음 기준 월(2027년 9월)로 넘긴다 — 지금 명단에 있는 아이는 아직 유아부에 있다.
   function gradRuleText() {
     var s = settingsOf();
     return '만 ' + s.gradAge + '세 · ' + s.gradMonth + '월';
@@ -2146,8 +2152,17 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (isNaN(b.getTime())) return '';
     var s = settingsOf();
     var startMonth = s.gradMonth, age = s.gradAge;
-    var y = (b.getMonth() + 1) >= startMonth ? b.getFullYear() : b.getFullYear() - 1;
-    return (y + age) + '-' + pad2(startMonth) + '-01';
+    // 1) 기준 나이가 되는 날
+    var aged = new Date(b.getFullYear() + age, b.getMonth(), b.getDate());
+    // 2) 그날 이후 처음 오는 기준 월 1일
+    var g = new Date(aged.getFullYear(), startMonth - 1, 1);
+    if (g < aged) g = new Date(aged.getFullYear() + 1, startMonth - 1, 1);
+    // 3) 이미 지난 학기는 예정으로 보여 주지 않고 다가오는 다음 학기로 넘긴다
+    var today = startOfDay(new Date());
+    for (var guard = 0; g < today && guard < 20; guard++) {
+      g = new Date(g.getFullYear() + 1, g.getMonth(), 1);
+    }
+    return iso(g);
   }
   function graduationOf(c) {
     if (c.graduation && /^\d{4}-\d{2}-\d{2}$/.test(c.graduation)) return c.graduation;
@@ -2164,7 +2179,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return '졸업';
   }
   // v1.4 — 졸업 예정자 카드 강조 구간
-  //   'past' 이미 졸업일이 지남(다음 학년도로 넘어감) · 'due' 1년 이내(D-365~D-0) · '' 그 외
+  //   'past' 졸업일이 이미 지남(직접 지정한 날짜가 지난 경우) · 'due' 1년 이내(D-365~D-0) · '' 그 외
+  //   v1.8 — 자동 계산은 항상 다가오는 학기를 가리키므로, 'past'는 직접 지정한 날이 지난 아이만 된다
   function gradHighlight(c) {
     var d = gradDays(c);
     if (d == null) return '';
@@ -2177,10 +2193,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (!g) return '';
     var d = gradDays(c);
     var hl = gradHighlight(c);
-    var text = hl === 'past' ? '🎓 졸업 대상' : hl === 'due' ? '🎓 졸업 예정' : '🎓 ' + gradShortText(d);
+    var text = hl === 'past' ? '🎓 지난 졸업' : hl === 'due' ? '🎓 졸업 예정' : '🎓 ' + gradShortText(d);
     var cls = hl === 'past' ? ' past' : hl === 'due' ? ' due' : (d >= 0 && d <= 90 ? ' soon' : '');
     return '<span class="tag-grad' + cls + '" title="' + esc(fmtLong(g)) +
-      ' 유아부 졸업(초등 ' + settingsOf().gradMonth + '월 입학) 예정">' + text + '</span>';
+      ' 유아부 졸업(초등 ' + settingsOf().gradMonth + '월 입학)' + (hl === 'past' ? ' · 이미 지난 날짜' : ' 예정') + '">' + text + '</span>';
   }
 
   /* ---------- v1.5 — 🎓 졸업 예정자 모아보기 ---------- */
@@ -2202,7 +2218,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var open = ui.gradOpen !== false;
     var sub = [];
     if (dueKs.length) sub.push('1년 안에 ' + dueKs.length + '명');
-    if (pastKs.length) sub.push('지난 졸업 대상 ' + pastKs.length + '명');
+    if (pastKs.length) sub.push('지난 졸업 ' + pastKs.length + '명');
     function rowHtml(k) {
       var d = gradDays(k);
       var meta = classMeta(k.classId);
@@ -2217,10 +2233,10 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var rows = dueKs.map(rowHtml).join('');
     if (pastKs.length) {
       rows += ui.gradPastOpen
-        ? '<div class="grad-sec">지난 졸업 대상 ' + pastKs.length + '명 · 명단에서 빼거나 다음 반으로 보낼 때 참고하세요</div>' + pastKs.map(rowHtml).join('')
-        : '<button type="button" class="grad-more" data-action="grad-past">지난 졸업 대상 ' + pastKs.length + '명 보기 ›</button>';
+        ? '<div class="grad-sec">지난 졸업 ' + pastKs.length + '명 · 직접 지정한 졸업일이 지난 아이예요. 명단에서 빼거나 다음 반으로 보낼 때 참고하세요</div>' + pastKs.map(rowHtml).join('')
+        : '<button type="button" class="grad-more" data-action="grad-past">지난 졸업 ' + pastKs.length + '명 보기 ›</button>';
     }
-    var title = dueKs.length ? '졸업 예정자 ' + dueKs.length + '명' : '지난 졸업 대상 ' + pastKs.length + '명';
+    var title = dueKs.length ? '졸업 예정자 ' + dueKs.length + '명' : '지난 졸업 ' + pastKs.length + '명';
     return '<div class="grad-card' + (open ? ' open' : '') + '">' +
       '<button type="button" class="grad-head" data-action="grad-toggle" aria-expanded="' + (open ? 'true' : 'false') + '">' +
         '<span class="gh-ico">🎓</span>' +
@@ -2357,7 +2373,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var valid = ui.cls === 'all' || data.classes.some(function (c) { return c.id === ui.cls; });
     if (!valid) ui.cls = t.role === 'admin' ? 'all' : (t.classId || data.classes[0].id);
     if (ui.view === 'admin' && t.role !== 'admin') ui.view = 'attendance';
-    if (ui.selMode && t.role !== 'admin') resetSel();   // v1.7 — 선택 삭제는 관리자만
+    if (t.role !== 'admin') resetSel();   // v1.8 — 명단 정리(선택 삭제)는 관리자만
     if (!ui.date) ui.date = iso(mostRecentSunday(new Date()));
     if (!ui.pWeek) ui.pWeek = sundayOf(ui.date);
     if (!ui.pCls || (ui.pCls !== 'all' && !data.classes.some(function (c) { return c.id === ui.pCls; }))) ui.pCls = 'all';
@@ -2380,7 +2396,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     else if (ui.view === 'admin') body = adminHtml(t);
     else body = attendanceHtml(t);
 
-    app.innerHTML = headerHtml(t) + bannerHtml() + '<main class="view' + (ui.selMode ? ' sel-mode' : '') + '">' + body + '</main>' + tabbarHtml(t);
+    app.innerHTML = headerHtml(t) + bannerHtml() + '<main class="view">' + body + '</main>' + tabbarHtml(t);
     try { document.title = settingsOf().title + ' 출석부'; } catch (e) {}
     paintSync();
 
@@ -2735,7 +2751,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<span><i class="d" style="background:var(--absent)"></i>결석 ' + stats.a + '</span>' +
           '<span><i class="d" style="background:#D8CDC2"></i>미체크 ' + stats.u + '</span>' +
         '</div>' +
-        (editable && !selModeOn() ? '<button class="all-btn" data-action="all-present">모두 출석으로 표시</button>' : '') +
+        (editable ? '<button class="all-btn" data-action="all-present">모두 출석으로 표시</button>' : '') +
       '</div>';
 
     // 보기 전용 안내
@@ -2770,9 +2786,6 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '</button>';
     }
 
-    // v1.7 — 관리자: 명단 일괄 선택 삭제
-    var selOn = selModeOn();
-
     // 아이 목록
     var list = '';
     visibleClasses.forEach(function (c) {
@@ -2790,8 +2803,6 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       }
       if (!kids.length) {
         list += '<div class="card empty"><span class="big">🌱</span>아직 등록된 어린이가 없어요.</div>';
-      } else if (selOn) {
-        kids.forEach(function (k) { list += selRowHtml(k); });
       } else {
         kids.forEach(function (k) { list += childHtml(k, t, dateKey); });
       }
@@ -2805,12 +2816,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       : '';
 
     return noticeHtml() + dateBar + chips + summary + rosterHtml(t, cls) + readOnly + bStrip + tStrip + gradStripHtml() +
-      (selOn ? '<div class="sel-note"><span>🗑</span><span>지울 아이를 눌러 체크하고 아래 <b>선택 삭제</b>를 누르세요. 그 아이의 출석·메모·기도제목 기록도 함께 지워져요.</span></div>' : '') +
-      '<div class="section-title"><span>' + (selOn ? '명단 정리' : '출석 명단 <small>' + esc(fmtLong(dateKey)) + ' ' + fmtWk(dateKey) + '</small>') + '</span>' +
-        (isAdmin ? '<button type="button" class="mini-btn sel-btn' + (selOn ? ' on' : '') + '" data-action="sel-toggle">' +
-          (selOn ? '✕ 취소' : '☑️ 선택') + '</button>' : '') +
-      '</div>' +
-      list + (selOn ? '' : addBtn) + (selOn ? selBarHtml() : '');
+      '<div class="section-title"><span>출석 명단 <small>' + esc(fmtLong(dateKey)) + ' ' + fmtWk(dateKey) + '</small></span></div>' +
+      list + addBtn;
   }
 
   function chipHtml(id, label, count, active, locked) {
@@ -2848,7 +2855,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     '</div>';
   }
 
-  /* ---------- v1.7 — 일괄 선택 모드의 아이 줄 · 아래 고정 버튼줄 ---------- */
+  /* ---------- v1.8 — 관리 탭 명단 정리의 아이 줄 · 아래 버튼줄 ---------- */
   function selRowHtml(k) {
     var on = !!ui.selIds[k.id];
     var meta = classMeta(k.classId);
@@ -2861,25 +2868,31 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           (k.birth ? ' · ' + esc(fmtDot(k.birth)) + '생' : '') + '</span></span>' +
     '</div>';
   }
-  function selBarHtml() {
+  function mgBarHtml() {
     var n = selCount();
-    return '<div class="selbar">' +
-      '<button type="button" class="selbar-all" data-action="sel-all">' + (selAllOn() ? '전체 해제' : '전체 선택') + '</button>' +
-      '<span class="selbar-cnt">선택 <b data-sel-count>' + n + '</b>명</span>' +
-      '<button type="button" class="selbar-del" data-action="sel-del"' + (n ? '' : ' disabled') + '>🗑 선택 삭제</button>' +
+    return '<div class="mg-bar">' +
+      '<button type="button" class="mg-all" data-action="sel-all">' + (selAllOn() ? '전체 해제' : '전체 선택') + '</button>' +
+      '<span class="mg-cnt">선택 <b data-mg-count>' + n + '</b>명</span>' +
+      '<button type="button" class="mg-del" data-action="sel-del"' + (n ? '' : ' disabled') + '>🗑 선택 삭제</button>' +
     '</div>';
   }
-  // 다시 그리지 않고 숫자·버튼만 갱신 (스크롤·누른 자리를 지킨다)
-  function refreshSelBar() {
-    var bar = document.querySelector('.selbar');
-    if (!bar) return;
+  // 다시 그리지 않고 체크 표시·숫자·버튼만 갱신 (스크롤·누른 자리를 지킨다)
+  function setSelRowState(el, on) {
+    if (!el) return;
+    el.classList.toggle('on', !!on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+    var box = el.querySelector('.sel-box');
+    if (box) box.textContent = on ? '✓' : '';
+  }
+  function refreshMgBar() {
     var n = selCount();
-    var cnt = bar.querySelector('[data-sel-count]');
-    if (cnt) cnt.textContent = String(n);
-    var del = bar.querySelector('.selbar-del');
-    if (del) del.disabled = !n;
-    var all = bar.querySelector('.selbar-all');
-    if (all) all.textContent = selAllOn() ? '전체 해제' : '전체 선택';
+    var cnts = document.querySelectorAll('[data-mg-count]');
+    for (var i = 0; i < cnts.length; i++) cnts[i].textContent = String(n);
+    var dels = document.querySelectorAll('.mg-del');
+    for (var j = 0; j < dels.length; j++) dels[j].disabled = !n;
+    var alls = document.querySelectorAll('.mg-all');
+    var label = selAllOn() ? '전체 해제' : '전체 선택';
+    for (var k = 0; k < alls.length; k++) alls[k].textContent = label;
   }
 
   function childHtml(c, t, dateKey) {
@@ -3246,8 +3259,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     for (var aa = 3; aa <= 8; aa++) {
       ageOpts += '<option value="' + aa + '"' + (aa === st.gradAge ? ' selected' : '') + '>만 ' + aa + '세</option>';
     }
-    // 예: 요즘 유아부 나이대가 이 기준이면 언제 졸업하는지 (다음 학기 기준으로 보여 준다)
-    var exBirth = (new Date().getFullYear() - st.gradAge + 2) + '-03-15';
+    // 예: 요즘 유아부 나이대가 이 기준이면 언제 졸업하는지 (다가오는 학기 기준으로 보여 준다)
+    //  v1.8 — 기준 나이가 되는 날이 다가오는 학기 안에 있는 생일을 골라, 지난 학기가 찍히지 않게 한다
+    var gDate = new Date(new Date().getFullYear(), st.gradMonth - 1, 1);
+    if (gDate < startOfDay(new Date())) gDate = new Date(gDate.getFullYear() + 1, st.gradMonth - 1, 1);
+    var exBirth = (gDate.getFullYear() - st.gradAge - 1) + '-' + pad2(st.gradMonth) + '-02';
     var exGrad = autoGraduation(exBirth);
     var settingsBlock =
       '<div class="section-title">앱 기본 설정 <small>제목 · 공지 · 졸업 기준</small></div>' +
@@ -3396,13 +3412,39 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           esc(c.name) + '<span>' + kids.length + '명</span></div>' + rows + '</div>';
     }).join('');
 
+    /* 5) v1.8 — 원아 명단 일괄 정리 (선택 삭제) — 출석 탭에서 여기로 옮겼다 */
+    if (ui.mgCls !== 'all' && !classById(ui.mgCls)) ui.mgCls = 'all';
+    var mgClasses = ui.mgCls === 'all' ? data.classes : data.classes.filter(function (c) { return c.id === ui.mgCls; });
+    var mgChips = '<button type="button" class="chip' + (ui.mgCls === 'all' ? ' active' : '') + '" data-action="mg-class" data-class="all">' +
+        '<span class="nm">전체</span><span class="cnt">' + data.children.length + '</span></button>';
+    data.classes.forEach(function (c) {
+      mgChips += '<button type="button" class="chip' + (ui.mgCls === c.id ? ' active' : '') + '" data-action="mg-class" data-class="' + c.id + '">' +
+        '<span class="nm">' + esc(c.name) + '</span><span class="cnt">' + kidsOf(c.id).length + '</span></button>';
+    });
+    var mgRows = '';
+    mgClasses.forEach(function (c) {
+      var mk = kidsOf(c.id);
+      mgRows += '<div class="mg-gh"><i style="background:' + classMeta(c.id).color + '"></i>' + esc(c.name) +
+        '<span>' + mk.length + '명</span></div>';
+      if (!mk.length) { mgRows += '<div class="mg-empty">이 반에는 아직 아이가 없어요.</div>'; return; }
+      mk.forEach(function (k) { mgRows += selRowHtml(k); });
+    });
+    var mgBlock =
+      '<div class="section-title">명단 정리 <small>여러 명을 한 번에 지우기</small></div>' +
+      '<div class="card mg-card">' +
+        '<div class="chips mg-chips">' + mgChips + '</div>' +
+        '<div class="mg-scroll" data-mg-scroll>' + mgRows + '</div>' +
+        mgBarHtml() +
+      '</div>' +
+      '<div class="data-note" style="padding:0 4px 2px">🗑 지울 아이를 눌러 체크하고 <b>선택 삭제</b>를 누르면 <b>이름이 담긴 확인 창</b>이 떠요. 확인하면 그 아이들의 출석·메모·기도제목 기록도 함께 지워지고 되돌릴 수 없어요. 아이 하나만 지우려면 위 <b>아이 반 이동</b>에서 사진을 눌러 정보 창의 <b>아이 삭제</b>를 쓰면 돼요.</div>';
+
     return settingsBlock + teachersBlock +
       classBlock +
       '<div class="section-title">아이 반 이동 <small>끌어서 옮기거나 반을 고르세요</small></div>' +
       '<div class="data-note" style="padding:0 4px 2px">⠿ <b>손잡이를 끌어 다른 반에 놓으면</b> 그 반으로 바로 옮겨지고 서버에도 바로 저장돼요 (PC 마우스·안드로이드·아이폰 공통). 끌면 화면 아래에 <b>반 이름 칩</b>이 떠서 반 카드까지 안 내려가도 그 칩에 놓으면 돼요. 아래 반 선택으로 옮겨도 같은 기록이 돼요.</div>' +
-      '<div class="data-note" style="padding:0 4px 2px">🐣 <b>새친구반</b>은 새로 온 친구가 적응하는 반이에요. 적응이 끝나면 아래 목록에서 반을 골라 주세요. 아이 하나를 명단에서 빼려면 동그란 사진을 눌러 정보 창에서 <b>아이 삭제</b>를 누르면 돼요.</div>' +
-      '<div class="data-note" style="padding:0 4px 2px">🗑 <b>여러 명을 한 번에 지우려면</b> <b>출석 탭</b>에서 명단 위 <b>☑️ 선택</b>을 누르고 체크한 뒤 <b>선택 삭제</b>를 누르면 돼요 (한 번에 전체 선택도 돼요).</div>' +
+      '<div class="data-note" style="padding:0 4px 2px">🐣 <b>새친구반</b>은 새로 온 친구가 적응하는 반이에요. 적응이 끝나면 아래 목록에서 반을 골라 주세요.</div>' +
       moveGroups +
+      mgBlock +
       adminBlock +
       '<div class="section-title">데이터</div>' +
       '<div class="card" style="padding:13px 14px">' +
@@ -4129,7 +4171,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       });
   }
 
-  /* ---------- v1.7 — 명단 일괄 삭제 (관리자) ---------- */
+  /* ---------- v1.8 — 명단 일괄 삭제 (관리자 · 관리 탭) ---------- */
   function deleteChildrenByIds(ids) {
     var set = {};
     ids.forEach(function (id) { set[id] = true; });
@@ -5027,7 +5069,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       case 'tab':
         ui.view = el.getAttribute('data-tab');
         ui.memoOpen = null;
-        resetSel();                         // v1.7 — 탭을 옮기면 선택 모드 종료
+        resetSel();                         // v1.8 — 탭을 옮기면 체크 해제
         if (ui.view === 'birthdays') {
           var bd = parseISO(ui.date);
           ui.bMonth = { y: bd.getFullYear(), m: bd.getMonth() + 1 };
@@ -5040,14 +5082,14 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       case 'date-next':
         ui.date = iso(addDays(parseISO(ui.date), a === 'date-prev' ? -7 : 7));
         ui.memoOpen = null;
-        resetSel();                         // v1.7 — 주일을 옮기면 선택 해제
+        resetSel();                         // v1.8 — 주일을 옮기면 체크 해제
         render();
         break;
 
       case 'class':
         ui.cls = el.getAttribute('data-class');
         ui.memoOpen = null;
-        resetSel();                         // v1.7 — 반을 옮기면 선택 해제
+        resetSel();                         // v1.8 — 반을 옮기면 체크 해제
         render();
         break;
 
@@ -5079,13 +5121,12 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         allPresent();
         break;
 
-      /* ---- v1.7 — 명단 일괄 선택 삭제 ---- */
-      case 'sel-toggle':
+      /* ---- v1.8 — 관리 탭 명단 정리 (일괄 선택 삭제) ---- */
+      case 'mg-class':
         if (!adminOnly()) break;
-        ui.selMode = !ui.selMode;
-        ui.selIds = {};
+        ui.mgCls = el.getAttribute('data-class') || 'all';
+        resetSel();
         render();
-        if (ui.selMode) toast('지울 아이를 눌러 체크하세요');
         break;
 
       case 'sel-pick': {
@@ -5094,21 +5135,23 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         if (!selKid) break;
         if (ui.selIds[selKid]) delete ui.selIds[selKid];
         else ui.selIds[selKid] = true;
-        el.classList.toggle('on', !!ui.selIds[selKid]);
-        el.setAttribute('aria-checked', ui.selIds[selKid] ? 'true' : 'false');
-        var sbox = el.querySelector('.sel-box');
-        if (sbox) sbox.textContent = ui.selIds[selKid] ? '✓' : '';
-        refreshSelBar();
+        setSelRowState(el, !!ui.selIds[selKid]);
+        refreshMgBar();
         break;
       }
 
       case 'sel-all': {
         if (!adminOnly()) break;
         var allOn = selAllOn();
-        var idsAll = visibleChildIds();
+        var idsAll = mgVisibleChildIds();
         if (allOn) idsAll.forEach(function (id) { delete ui.selIds[id]; });
         else idsAll.forEach(function (id) { ui.selIds[id] = true; });
-        render();
+        // 화면을 다시 그리지 않고 체크 표시만 바꾼다 (보던 자리를 지킨다)
+        var srows = document.querySelectorAll('.mg-scroll .sel-row');
+        for (var sri = 0; sri < srows.length; sri++) {
+          setSelRowState(srows[sri], !!ui.selIds[srows[sri].getAttribute('data-child')]);
+        }
+        refreshMgBar();
         break;
       }
 
@@ -5390,7 +5433,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
   // 키보드: ESC 로 모달 닫기 · PIN은 숫자 키로도 입력
   document.addEventListener('keydown', function (e) {
-    // v1.7 — 선택 모드의 아이 줄은 Enter·Space 로도 체크
+    // v1.8 — 명단 정리의 아이 줄은 Enter·Space 로도 체크
     var srow = (e.target && e.target.closest) ? e.target.closest('.sel-row') : null;
     if (srow && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
       e.preventDefault(); srow.click(); return;

@@ -37,6 +37,8 @@
           이번 달 생일 모아보기(관리 카드 · 출석 스트립 · 생일 탭) — teachers 행 birthday
    v1.8 — 명단 일괄 정리(선택 삭제)를 출석 탭에서 관리 탭으로 옮김 — 출석 화면은 출석 체크만
           관리 탭 '명단 정리'에서 반별 필터·체크·전체 선택/해제·선택 삭제
+   v1.9 — 졸업 표기를 '올해 졸업 · 내년 졸업'으로 (졸업 예정·D-day·남은 개월 표시 없음)
+          나이도 '몇 개월' 없이 'N세'로만 — 아이 카드·생일·명단·정보 창 공통
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -984,7 +986,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 9;             // v1.6 — 관리자가 앱 설정·반 목록을 직접 바꾼다 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v1.8';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v1.9';   // 화면에 보이는 시범용 버전
 
   // v1.6 — 앱 기본 설정 (관리 탭에서 바꾸고, meta 행으로 모든 기기에 함께 간다)
   var DEFAULT_TITLE = '런던순복음교회 유아부';
@@ -1174,10 +1176,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (r.getDate() < b.getDate()) m--;
     return Math.max(0, m);
   }
+  // v1.9 — 나이는 몇 개월인지 없이 'N세'로만 (생일·아이 정보·명단 공통)
   function ageText(months) {
-    if (months < 48) return months + '개월';
-    var y = Math.floor(months / 12), m = months % 12;
-    return m ? y + '세 ' + m + '개월' : y + '세';
+    if (months == null || isNaN(months)) return '';
+    var y = Math.floor(months / 12);
+    return y < 1 ? '돌 전' : y + '세';
   }
   function daysBetween(aKey, bKey) {
     return Math.round((startOfDay(parseISO(bKey)) - startOfDay(parseISO(aKey))) / 86400000);
@@ -2172,38 +2175,50 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var g = graduationOf(c);
     return g ? daysBetween(todayISO(), g) : null;
   }
-  function gradShortText(d) {
-    if (d == null) return '';
-    if (d > 0) return 'D-' + d;
-    if (d === 0) return 'D-day';
-    return '졸업';
+  // v1.9 — 졸업 표기는 날짜 대신 연도로만: 올해 졸업 · 내년 졸업 (몇 개월·며칠 남았는지는 쓰지 않는다)
+  function gradLabelFor(g) {
+    if (!g) return '';
+    if (daysBetween(todayISO(), g) < 0) return '지난 졸업';
+    var y = parseISO(g).getFullYear();
+    var nowY = new Date().getFullYear();
+    if (y === nowY) return '올해 졸업';
+    if (y === nowY + 1) return '내년 졸업';
+    return y + '년 졸업';
   }
-  // v1.4 — 졸업 예정자 카드 강조 구간
-  //   'past' 졸업일이 이미 지남(직접 지정한 날짜가 지난 경우) · 'due' 1년 이내(D-365~D-0) · '' 그 외
-  //   v1.8 — 자동 계산은 항상 다가오는 학기를 가리키므로, 'past'는 직접 지정한 날이 지난 아이만 된다
+  function gradLabel(c) { return gradLabelFor(graduationOf(c)); }
+  // v1.9 — 아이 카드·졸업 명단에서 쓰는 구간
+  //   'past' 졸업일이 이미 지남(직접 지정한 날이 지난 경우) · 'due' 올해 졸업 · '' 그 외
   function gradHighlight(c) {
     var d = gradDays(c);
     if (d == null) return '';
     if (d < 0) return 'past';
-    if (d <= 365) return 'due';
+    return parseISO(graduationOf(c)).getFullYear() <= new Date().getFullYear() ? 'due' : '';
+  }
+  // 졸업 명단에 모으는 아이: 올해 졸업 · 내년 졸업 · (직접 지정한) 지난 졸업
+  function gradScope(c) {
+    var g = graduationOf(c);
+    if (!g) return '';
+    if (gradDays(c) < 0) return 'past';
+    var y = parseISO(g).getFullYear();
+    var nowY = new Date().getFullYear();
+    if (y <= nowY) return 'this';
+    if (y === nowY + 1) return 'next';
     return '';
   }
   function gradBadge(c) {
     var g = graduationOf(c);
     if (!g) return '';
-    var d = gradDays(c);
-    var hl = gradHighlight(c);
-    var text = hl === 'past' ? '🎓 지난 졸업' : hl === 'due' ? '🎓 졸업 예정' : '🎓 ' + gradShortText(d);
-    var cls = hl === 'past' ? ' past' : hl === 'due' ? ' due' : (d >= 0 && d <= 90 ? ' soon' : '');
+    var lab = gradLabel(c);
+    var cls = lab === '지난 졸업' ? ' past' : lab === '올해 졸업' ? ' due' : '';
     return '<span class="tag-grad' + cls + '" title="' + esc(fmtLong(g)) +
-      ' 유아부 졸업(초등 ' + settingsOf().gradMonth + '월 입학)' + (hl === 'past' ? ' · 이미 지난 날짜' : ' 예정') + '">' + text + '</span>';
+      ' 유아부 졸업(초등 ' + settingsOf().gradMonth + '월 입학)' + (lab === '지난 졸업' ? ' · 이미 지난 날짜' : '') + '">🎓 ' + lab + '</span>';
   }
 
-  /* ---------- v1.5 — 🎓 졸업 예정자 모아보기 ---------- */
-  // 졸업 예정(D-365~D-0)과 이미 지난 졸업 대상자를 한 목록으로 — 예정은 가까운 날짜부터, 지난 아이는 최근부터
+  /* ---------- v1.9 — 🎓 올해·내년 졸업 명단 ---------- */
+  // 올해 졸업과 내년 졸업을 한 카드에 모으고, 이미 지난 졸업은 접어 둔다 — 가까운 학기부터
   function gradKids() {
     return data.children.filter(function (c) {
-      return c.birth && gradHighlight(c) !== '';
+      return c.birth && gradScope(c) !== '';
     }).sort(function (a, b) {
       var da = gradDays(a), db = gradDays(b);
       if ((da < 0) !== (db < 0)) return da < 0 ? 1 : -1;
@@ -2213,35 +2228,38 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function gradStripHtml() {
     var ks = gradKids();
     if (!ks.length) return '';
-    var dueKs = ks.filter(function (k) { return gradDays(k) >= 0; });
-    var pastKs = ks.filter(function (k) { return gradDays(k) < 0; });
+    var thisKs = ks.filter(function (k) { return gradScope(k) === 'this'; });
+    var nextKs = ks.filter(function (k) { return gradScope(k) === 'next'; });
+    var pastKs = ks.filter(function (k) { return gradScope(k) === 'past'; });
     var open = ui.gradOpen !== false;
-    var sub = [];
-    if (dueKs.length) sub.push('1년 안에 ' + dueKs.length + '명');
-    if (pastKs.length) sub.push('지난 졸업 ' + pastKs.length + '명');
     function rowHtml(k) {
-      var d = gradDays(k);
+      var sc = gradScope(k);
       var meta = classMeta(k.classId);
-      var dcls = d < 0 ? ' past' : d === 0 ? ' today' : d <= 90 ? ' soon' : '';
+      var dcls = sc === 'past' ? ' past' : sc === 'this' ? ' soon' : '';
       return '<button type="button" class="grad-row" data-action="child-info" data-child="' + k.id + '">' +
         '<span class="gr-cls" style="background:' + meta.soft + ';color:' + meta.color + '">' + esc(className(k.classId)) + '</span>' +
         '<span class="gr-main"><b>' + esc(k.name) + '</b>' +
           '<small>' + esc(fmtDot(k.birth)) + '생 · 졸업 ' + esc(fmtDot(graduationOf(k))) + (isManualGrad(k) ? ' (직접 지정)' : '') + '</small></span>' +
-        '<span class="dday' + dcls + '">' + (d < 0 ? '🎓 졸업' : gradShortText(d)) + '</span>' +
+        '<span class="dday' + dcls + '">' + esc(gradLabel(k)) + '</span>' +
       '</button>';
     }
-    var rows = dueKs.map(rowHtml).join('');
+    var rows = '';
+    if (thisKs.length) rows += '<div class="grad-sec">올해 졸업 ' + thisKs.length + '명</div>' + thisKs.map(rowHtml).join('');
+    if (nextKs.length) rows += '<div class="grad-sec">내년 졸업 ' + nextKs.length + '명</div>' + nextKs.map(rowHtml).join('');
     if (pastKs.length) {
       rows += ui.gradPastOpen
         ? '<div class="grad-sec">지난 졸업 ' + pastKs.length + '명 · 직접 지정한 졸업일이 지난 아이예요. 명단에서 빼거나 다음 반으로 보낼 때 참고하세요</div>' + pastKs.map(rowHtml).join('')
         : '<button type="button" class="grad-more" data-action="grad-past">지난 졸업 ' + pastKs.length + '명 보기 ›</button>';
     }
-    var title = dueKs.length ? '졸업 예정자 ' + dueKs.length + '명' : '지난 졸업 ' + pastKs.length + '명';
+    var parts = [];
+    if (thisKs.length) parts.push('올해 졸업 ' + thisKs.length + '명');
+    if (nextKs.length) parts.push('내년 졸업 ' + nextKs.length + '명');
+    var title = parts.length ? parts.join(' · ') : '지난 졸업 ' + pastKs.length + '명';
+    var sub = '눌러서 아이 정보 보기' + (parts.length && pastKs.length ? ' · 지난 졸업 ' + pastKs.length + '명' : '');
     return '<div class="grad-card' + (open ? ' open' : '') + '">' +
       '<button type="button" class="grad-head" data-action="grad-toggle" aria-expanded="' + (open ? 'true' : 'false') + '">' +
         '<span class="gh-ico">🎓</span>' +
-        '<span class="gh-txt"><b>' + title + '</b><small>' +
-          esc(sub.join(' · ')) + ' · 눌러서 아이 정보 보기</small></span>' +
+        '<span class="gh-txt"><b>' + title + '</b><small>' + esc(sub) + '</small></span>' +
         '<span class="chev">›</span>' +
       '</button>' +
       (open ? '<div class="grad-body">' + rows + '</div>' : '') +
@@ -2287,25 +2305,25 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function gradAutoTextHtml(birth) {
     var g = autoGraduation(birth);
     if (!g) return '🎓 <span class="muted">생년월일을 넣으면 자동으로 계산돼요</span>';
-    return '🎓 ' + esc(fmtDot(g)) + ' <small>' + esc(gradShortText(daysBetween(todayISO(), g))) + ' · ' + esc(gradRuleText()) + ' 학기</small>';
+    return '🎓 ' + esc(fmtDot(g)) + ' <small>' + esc(gradLabelFor(g)) + ' · ' + esc(gradRuleText()) + ' 학기</small>';
   }
   function gradAutoNoteText(birth) {
     var g = autoGraduation(birth);
     return g ? '생일 기준 자동은 ' + fmtDot(g) + '예요' : '생일 기준 자동 계산은 생년월일이 있어야 해요';
   }
-  // 등록·수정 창의 졸업 예정 입력 — [자동 계산] / [직접 지정] 전환 + 직접 지정 날짜
+  // 등록·수정 창의 졸업 입력 — [자동 계산] / [직접 지정] 전환 + 직접 지정 날짜
   function graduationFieldHtml(c) {
     var manual = isManualGrad(c) ? c.graduation : '';
     var birth = c ? c.birth : '';
     return '<div class="field grad-field" data-grad-field>' +
-        '<span>졸업 예정 <em>' + esc(gradRuleText()) + ' 기준</em></span>' +
-        '<div class="seg" role="group" aria-label="졸업 예정 방식">' +
+        '<span>졸업 <em>' + esc(gradRuleText()) + ' 기준</em></span>' +
+        '<div class="seg" role="group" aria-label="졸업 시기 정하는 방식">' +
           '<button type="button" class="seg-btn' + (manual ? '' : ' active') + '" data-action="grad-mode" data-mode="auto">자동 계산</button>' +
           '<button type="button" class="seg-btn' + (manual ? ' active' : '') + '" data-action="grad-mode" data-mode="manual">직접 지정</button>' +
         '</div>' +
         '<div class="grad-auto" data-grad-auto' + (manual ? ' hidden' : '') + '>' + gradAutoTextHtml(birth) + '</div>' +
         '<div class="grad-manual" data-grad-manual' + (manual ? '' : ' hidden') + '>' +
-          '<input class="input" name="graduation" type="date" value="' + esc(manual) + '" aria-label="졸업 예정일 직접 지정">' +
+          '<input class="input" name="graduation" type="date" value="' + esc(manual) + '" aria-label="졸업일 직접 지정">' +
           '<div class="grad-manual-note" data-grad-note>' + esc(gradAutoNoteText(birth)) + '</div>' +
           '<button type="button" class="grad-reset" data-action="grad-mode" data-mode="auto">↺ 자동 계산으로 되돌리기</button>' +
         '</div>' +
@@ -3281,7 +3299,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<div class="form-error" id="asError" hidden></div>' +
           '<button type="submit" class="btn primary" style="width:100%">저장</button>' +
         '</form>' +
-        '<div class="field-hint" style="margin:0">제목은 머리글과 로그인 화면에, 공지는 <b>출석 화면 맨 위 한 줄 배너</b>로 보여요. 졸업 기준을 바꾸면 모든 아이의 졸업예정일이 바로 다시 계산돼요(직접 지정한 아이는 그대로).</div>' +
+        '<div class="field-hint" style="margin:0">제목은 머리글과 로그인 화면에, 공지는 <b>출석 화면 맨 위 한 줄 배너</b>로 보여요. 졸업 기준을 바꾸면 모든 아이의 졸업 시기가 바로 다시 계산돼요(직접 지정한 아이는 그대로).</div>' +
       '</div>';
 
     /* 1) 선생님 명단 — 추가 · 수정 · 삭제 */
@@ -3935,12 +3953,11 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var lastTxt = last === 'p' ? '출석' : last === 'a' ? '결석' : '미체크';
     var fv = firstVisitOf(c);
     var g = graduationOf(c);
-    var gd = gradDays(c);
     var fvTxt = fv
       ? esc(fmtDot(fv)) + (sinceVisitText(c, todayISO()) ? ' · ' + esc(sinceVisitText(c, todayISO())) : '')
       : '<span class="muted">기록 없음</span>';
     var gTxt = g
-      ? esc(fmtDot(g)) + (gd != null ? ' · ' + esc(gradShortText(gd)) : '') +
+      ? esc(fmtDot(g)) + ' · <b>' + esc(gradLabel(c)) + '</b>' +
         '<span class="info-hint">' + (isManualGrad(c) ? '직접 지정한 날짜' : '생년월일로 자동 계산') +
         ' · 영국 학년 ' + settingsOf().gradMonth + '월 시작 · 유아부 졸업(초등 입학)</span>'
       : '<span class="muted">생일 정보 없음</span>';
@@ -3948,7 +3965,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       infoRow('이번 주일', esc(fmtMD(base)) + ' · ' + esc(lastTxt)) +
       infoRow('최근 4주', '출석 ' + p + ' · 결석 ' + a + ' · 미체크 ' + u) +
       infoRow('첫 방문', fvTxt) +
-      infoRow('졸업 예정', gTxt) +
+      infoRow('졸업', gTxt) +
     '</div>';
   }
 
@@ -4041,7 +4058,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<input class="input" name="firstVisit" type="date" max="' + todayISO() + '" value="' + esc(fvNow) + '"></label>' +
       '</div>' +
       graduationFieldHtml(c) +
-      '<div class="field-hint">첫 방문일을 바꾸면 지난 주일 명단에도 그 날부터 보여요. 생년월일을 넣거나 바꾸면 졸업 D-day가 바로 다시 계산돼요.</div>';
+      '<div class="field-hint">첫 방문일을 바꾸면 지난 주일 명단에도 그 날부터 보여요. 생년월일을 넣거나 바꾸면 졸업 시기(올해·내년)가 바로 다시 계산돼요.</div>';
 
     openModal(head +
       '<form id="childForm" novalidate>' +
@@ -4087,12 +4104,12 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     if (!name) { fail('이름을 입력해 주세요.'); return; }
     var birthIn = String(fd.get('birth') || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthIn) || birthIn > todayISO()) {
-      fail('생년월일을 정확히 넣어 주세요. 생년월일로 졸업 D-day를 계산해요.'); return;
+      fail('생년월일을 정확히 넣어 주세요. 생년월일로 졸업 시기를 계산해요.'); return;
     }
     var gMode = String(fd.get('gradMode') || 'auto');
     var gradIn = String(fd.get('graduation') || '').trim();
     if (gMode === 'manual' && !/^\d{4}-\d{2}-\d{2}$/.test(gradIn)) {
-      fail('졸업 예정일을 골라 주세요. 생일로 계산하려면 [자동 계산]을 눌러 주세요.'); return;
+      fail('졸업일을 골라 주세요. 생일로 계산하려면 [자동 계산]을 눌러 주세요.'); return;
     }
     var wantClass = String(fd.get('classId') || '');
     if (wantClass && wantClass !== c.classId && classById(wantClass) && !canMoveChild(t, c, wantClass)) {

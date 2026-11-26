@@ -1153,14 +1153,8 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 .sb-h.none .n{color:var(--muted)}
 .sb-h.none .n small{color:#BDB0A2}
 
-/* 🙏 선생님 기도제목 */
-.tp-strip{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 12px;border-radius:16px;border:1px solid #E4DEF2;background:linear-gradient(100deg,#F6F3FC,#FFFDF9);margin:0 0 12px}
-.tp-strip:active{background:#F1ECFA}
-.tp-strip .ts-ico{flex:0 0 auto;font-size:17px}
-.tp-strip .ts-tx{flex:1;min-width:0}
-.tp-strip .ts-tx b{display:block;font-size:12.5px;font-weight:800;color:#5E4B7A;letter-spacing:-.2px}
-.tp-strip .ts-tx small{display:block;margin-top:1px;font-size:10.5px;font-weight:700;color:#9A8CAE}
-.tp-strip .go{flex:0 0 auto;color:#C3B7D2;font-weight:800;font-size:16px}
+/* 🙏 선생님 기도제목 — 기도 탭에 바로 보이는 카드 */
+.tp-empty-note{margin:2px 0 6px;padding:11px 12px;border-radius:13px;border:1px dashed #DED7F5;background:#FBFAFE;color:#6A5CAE;font-size:11px;font-weight:700;line-height:1.6;word-break:keep-all}
 .tp-card{padding:10px 12px;border-radius:15px;background:#fff;border:1px solid var(--line);margin-bottom:7px}
 .tp-card .tp-h{display:flex;align-items:center;gap:6px}
 .tp-card .tp-h .nm{font-size:12.5px;font-weight:800;color:var(--ink)}
@@ -2862,7 +2856,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         item('🐑', '순복이 가져간 친구',
           '<b>한 주 동안 순복이와 함께 지내요.</b> 로그인 화면 맨 위 <span class="k">이번 주 순복이</span> 카드나 출석 화면의 순복이 카드를 누르면 이번 주와 <span class="k">지난 기록</span>을 볼 수 있어요. 반에 입장한 뒤에는 누가 가져갔는지 한 번 눌러 고르고, 한 줄 메모도 남길 수 있어요.') +
         item('🙏', '선생님 기도제목',
-          '<span class="k">기도</span> 탭의 <span class="k">선생님 기도제목</span>을 누르면 선생님별 기도제목을 함께 볼 수 있어요. 관리자 PIN 없이 반에 입장한 선생님도 우리 반 선생님 기도제목을 쓸 수 있어요.') +
+          '<span class="k">기도</span> 탭에 선생님 기도제목이 <b>바로 보여요</b>. 내 이름을 누르면 내 기도제목을 적고 고칠 수 있어요(관리자 PIN 필요 없음). 다른 반은 보기만 돼요.') +
       '</div>' +
       '<div class="help-foot">머리글의 <b>순복이 얼굴</b>이나 <b>?</b>를 누르면 언제든 이 안내를 다시 볼 수 있어요.</div>' +
       '<button type="button" class="btn primary help-close" data-action="modal-close">알겠어요</button>';
@@ -2994,7 +2988,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '</button>';
         }).join('') + '</div>';
       });
-      picker = '<div class="sb-pick-h"><span>누가 가져갔나요?</span><small>한 번 누르면 바로 저장돼요</small></div>' +
+      picker = '<div class="sb-pick-h"><span>' + (isThis ? '이번 주' : sbWeekLabel(wk) + ' 주') + '는 누가 가져갔나요?</span><small>한 번 누르면 바로 저장돼요</small></div>' +
         (grid || '<div class="empty" style="padding:14px">이 반에는 아직 등록된 친구가 없어요.</div>');
     }
 
@@ -3083,14 +3077,41 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   /* =========================================================
      v2.1 — 🙏 선생님 기도제목 (쓰기 · 고치기 · 함께 보기)
      ========================================================= */
-  function tpStripHtml(t) {
-    var n = tpCount();
-    return '<button type="button" class="tp-strip" data-action="tp-open">' +
-      '<span class="ts-ico">🙏</span>' +
-      '<span class="ts-tx"><b>선생님 기도제목</b>' +
-        '<small>' + (n ? n + '명 작성 · 함께 기도해요' : '아직 없어요 · 첫 기도제목을 남겨 보세요') + '</small></span>' +
-      '<span class="go">›</span>' +
-    '</button>';
+  // v2.1 — 기도 탭에 바로 보이는 선생님 기도제목 (누르지 않아도 읽힌다)
+  function tpCardHtml(t, x) {
+    var p = tpOf(x.id);
+    var cid = (x.classIds || [])[0] || '';
+    var meta = classMeta(cid);
+    var can = tpCanEdit(t, x.id);
+    return '<div class="tp-card">' +
+      '<div class="tp-h"><span class="nm">' + esc(x.name) + ' 선생님</span>' +
+        ((x.classIds || []).length
+          ? '<span class="pill" style="background:' + meta.soft + ';color:' + meta.color + '">' + esc(x.classIds.map(className).join('·')) + '</span>'
+          : '') +
+        (can ? '<button type="button" class="edit" data-action="tp-edit" data-teacher="' + x.id + '">✏️ 수정</button>' : '') +
+      '</div>' +
+      '<div class="tp-t">' + esc(p.text) + '</div>' +
+      (p.at ? '<div class="tp-by">' + tpDateText(p.at) + ' · ' + esc(p.byName || x.name) + '</div>' : '') +
+    '</div>';
+  }
+
+  function tpInlineHtml(t) {
+    var written = tpOrder(data.teachers.filter(function (x) { return !!tpOf(x.id); }));
+    var blank = tpOrder(data.teachers.filter(function (x) { return !tpOf(x.id); }));
+    var mineBlank = blank.filter(function (x) { return tpCanEdit(t, x.id); });
+    var cards = written.map(function (x) { return tpCardHtml(t, x); }).join('');
+    var chips = mineBlank.map(function (x) {
+      return '<button type="button" data-action="tp-edit" data-teacher="' + x.id + '">+ ' + esc(x.name) + '</button>';
+    }).join('');
+    return '<div class="section-title">🙏 선생님 기도제목 <small>' +
+        (written.length ? written.length + '명 작성 · 함께 기도해요' : '아직 없어요 · 내 이름을 눌러 적어 보세요') + '</small></div>' +
+      (cards || '<div class="tp-empty-note">🙏 선생님들의 기도제목이 이곳에 그대로 보여요. 아직 적은 선생님이 없어요 — 아래 내 이름을 누르면 첫 기도제목을 남길 수 있어요.</div>') +
+      (mineBlank.length
+        ? '<div class="tp-empty">' + chips + '</div>'
+        : (written.length ? '' : '')) +
+      (t && t.role === 'admin' && blank.length
+        ? '<div class="data-note" style="padding:6px 4px 0">기도제목을 아직 안 적은 선생님 ' + blank.length + '명은 관리 탭 > 선생님 기도제목에서도 쓸 수 있어요.</div>'
+        : '');
   }
 
   function tpOrder(list) {
@@ -3116,22 +3137,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     var written = tpOrder(data.teachers.filter(function (x) { return !!tpOf(x.id); }));
     var blank = tpOrder(data.teachers.filter(function (x) { return !tpOf(x.id); }));
 
-    var cards = written.map(function (x) {
-      var p = tpOf(x.id);
-      var cid = (x.classIds || [])[0] || '';
-      var meta = classMeta(cid);
-      var can = tpCanEdit(t, x.id);
-      return '<div class="tp-card">' +
-        '<div class="tp-h"><span class="nm">' + esc(x.name) + ' 선생님</span>' +
-          ((x.classIds || []).length
-            ? '<span class="pill" style="background:' + meta.soft + ';color:' + meta.color + '">' + esc(x.classIds.map(className).join('·')) + '</span>'
-            : '') +
-          (can ? '<button type="button" class="edit" data-action="tp-edit" data-teacher="' + x.id + '">✏️ 수정</button>' : '') +
-        '</div>' +
-        '<div class="tp-t">' + esc(p.text) + '</div>' +
-        (p.at ? '<div class="tp-by">' + tpDateText(p.at) + ' · ' + esc(p.byName || x.name) + '</div>' : '') +
-      '</div>';
-    }).join('');
+    var cards = written.map(function (x) { return tpCardHtml(t, x); }).join('');
 
     var mineBlank = blank.filter(function (x) { return tpCanEdit(t, x.id); });
     var chips = mineBlank.map(function (x) {
@@ -3794,7 +3800,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<button class="mn-btn" data-action="prayer-week" data-dir="1" aria-label="다음주">›</button>' +
       '</div>' +
       '<div class="chips">' + chips + '</div>' +
-      tpStripHtml(t) +
+      tpInlineHtml(t) +
       '<div class="prayer-note"><b>🙏 함께 기도해요</b> — 모든 반 선생님과 임원이 이번 주 기도제목을 함께 볼 수 있어요. 다른 반 기도제목에도 “함께 기도했어요”를 누를 수 있습니다.</div>' +
       body +
       (r.mineWithout

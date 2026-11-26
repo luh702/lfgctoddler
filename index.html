@@ -672,7 +672,7 @@ h1,h2,h3,h4,p{margin:0}
 .mg-del:disabled{opacity:.34}
 
 /* ---------------- v2.2 — 반 관리 · 선생님 관리 (한 카드에서 여러 명 옮기기·지우기) ---------------- */
-.mg-scroll.c-scroll{max-height:min(52vh,470px)}
+.mg-scroll.c-scroll{max-height:min(52vh,470px);overflow-x:hidden}
 .mg-bar.t-bar .ts-all{flex:0 0 auto;height:44px;padding:0 13px;border-radius:12px;border:1px solid var(--line);background:#FFFDF9;font-size:12px;font-weight:800;color:var(--ink-soft)}
 .mg-acts{display:flex;gap:7px}
 .mg-acts button{flex:1;height:44px;border-radius:12px;font-size:12.5px;font-weight:800}
@@ -693,7 +693,7 @@ h1,h2,h3,h4,p{margin:0}
 .cls-block{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden;margin-top:9px}
 .cls-block:first-child{margin-top:0}
 .cls-head{display:flex;align-items:center;gap:7px;padding:8px 10px;background:#FCF9F3;border-bottom:1px solid #F3EBDF}
-.cls-head .cn{font-size:12.5px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cls-head .cn{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cls-head .cn i{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px;vertical-align:1px}
 .cls-head .n{font-size:10.5px;color:var(--muted);font-weight:700;flex:0 0 auto}
 .cls-head .cls-all{margin-left:auto;flex:0 0 auto;min-height:30px;padding:5px 9px;border-radius:999px;border:1px solid #F3DCC9;background:var(--primary-soft);color:var(--primary-dark);font-size:10.5px;font-weight:800;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -1555,6 +1555,9 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
 
   /* ---------- v1.8 — 명단 정리 (관리 탭 · 일괄 선택 삭제) · v2.2 선생님까지 ---------- */
   function resetSel() { ui.selIds = {}; ui.tselIds = {}; ui.mgMoveOpen = false; ui.tMoveOpen = false; }
+  // v2.2 — 아이 쪽과 선생님 쪽 체크를 따로 지운다(한쪽을 옮겨도 다른 쪽 체크는 그대로)
+  function resetChildSel() { ui.selIds = {}; ui.mgMoveOpen = false; }
+  function resetTeacherSel() { ui.tselIds = {}; ui.tMoveOpen = false; }
   function selCount() {
     var n = 0;
     Object.keys(ui.selIds || {}).forEach(function (id) { if (ui.selIds[id] && childById(id)) n++; });
@@ -5091,7 +5094,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       listTxt + ' — 이 아이들의 출석·메모·기도제목 기록도 함께 지워지고, 되돌릴 수 없어요.',
       function () {
         deleteChildrenByIds(ids);
-        resetSel();
+        resetChildSel();
         save();
         closeModal();
         render();
@@ -5116,7 +5119,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       moved++;
     });
     ui.mgMoveOpen = false;
-    resetSel();
+    resetChildSel();
     if (moved) {
       save();
       render();
@@ -5144,7 +5147,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       moved++;
     });
     ui.tMoveOpen = false;
-    resetSel();
+    resetTeacherSel();
     if (moved) {
       save();
       render();
@@ -5167,7 +5170,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         ids.forEach(function (id) { set[id] = true; });
         data.teachers = data.teachers.filter(function (x) { return !set[x.id]; });
         save();
-        resetSel();
+        resetTeacherSel();
         closeModal();
         render();
         toast(ids.length + '명을 선생님 명단에서 지웠어요');

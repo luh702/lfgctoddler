@@ -52,6 +52,9 @@
    v2.2 — [관리] 탭을 두 카드로 정리: **반 관리**(반 추가·순서·이름·PIN·삭제 + 그 반 아이 명단)와
           **선생님 관리**(추가·수정·생일 + 명단) — 양쪽 모두 체크박스로 여러 명을 한 번에
           골라 [↔ 반 이동]·[🗑 삭제] (끌어서 이동은 그대로) · '이 반 전체' 선택
+   v2.3 — 🐑 순복이 가져간 친구를 로그인(메인) 화면에서도 바로 고르기: 반에 입장하지 않아도
+          순복이 창의 [🐑 이번 주 고르기] 탭에서 모든 반 친구를 골라 저장·메모·기록 지우기
+          (반에 입장한 선생님·관리자의 기존 권한과 화면은 그대로)
    ========================================================= */
 :root{
   --bg:#FAF6EF;
@@ -1243,7 +1246,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   var SESSION_KEY = LOCAL_ONLY ? 'lfgc_nursery_session_v1_local' : 'lfgc_nursery_session_v1';
 
   var DATA_VERSION = 9;             // v1.6 — 관리자가 앱 설정·반 목록을 직접 바꾼다 (자료 초기화 없음)
-  var APP_VERSION_LABEL = 'v2.2';   // 화면에 보이는 시범용 버전
+  var APP_VERSION_LABEL = 'v2.3';   // 화면에 보이는 시범용 버전
 
   // v1.6 — 앱 기본 설정 (관리 탭에서 바꾸고, meta 행으로 모든 기기에 함께 간다)
   var DEFAULT_TITLE = '런던순복음교회 유아부';
@@ -2462,12 +2465,15 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     return true;
   }
   function sbRemove(week) { delete sbLog()[sbWeekOf(week)]; }
-  // 이 기록을 고칠 수 있나 — 관리자는 모든 반, 반 선생님은 자기 반 아이 기록만
+  // 이 기록을 고칠 수 있나 — 관리자는 모든 반, 반 선생님은 자기 반 아이 기록만,
+  // v2.3 — 로그인 화면(반에 입장하기 전)에서도 순복이를 고를 수 있다 (모든 반)
   function sbCanEdit(t, entry) {
-    if (!t) return false;
+    if (!t) return true;
     if (t.role === 'admin') return true;
     return !entry || entry.classId === t.classId;
   }
+  // v2.3 — 모든 반을 반별로 묶어 보여 주는 사람 (관리자 · 로그인 화면)
+  function sbAllClasses(t) { return !t || t.role === 'admin'; }
   function sbChildName(e) {
     var c = e ? childById(e.childId) : null;
     return c ? c.name : ((e && e.childName) || '지난 친구');
@@ -2919,7 +2925,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         item('⚙️', '관리 탭',
           '관리자 PIN으로 들어가면 <span class="k">선생님 관리</span>와 <span class="k">반 관리</span>에서 선생님·반·아이 명단을 직접 바꾸고, 왼쪽 칸을 눌러 여러 명을 체크한 뒤 <span class="k">↔ 반 이동</span>이나 <span class="k">🗑 삭제</span>로 한 번에 처리할 수 있어요. 다른 반은 보기만 돼요.') +
         item('🐑', '순복이 가져간 친구',
-          '<b>한 주 동안 순복이와 함께 지내요.</b> 로그인 화면 맨 위 <span class="k">이번 주 순복이</span> 카드나 출석 화면의 순복이 카드를 누르면 이번 주와 <span class="k">지난 기록</span>을 볼 수 있어요. 반에 입장한 뒤에는 누가 가져갔는지 한 번 눌러 고르고, 한 줄 메모도 남길 수 있어요.') +
+          '<b>한 주 동안 순복이와 함께 지내요.</b> 로그인 화면 맨 위 <span class="k">이번 주 순복이</span> 카드나 출석 화면의 순복이 카드를 누르면 이번 주와 <span class="k">지난 기록</span>을 볼 수 있어요. 로그인 화면에서도 [🐑 이번 주 고르기] 탭에서 누가 가져갔는지 한 번 눌러 고르고, 한 줄 메모도 남길 수 있어요.') +
         item('🙏', '선생님 기도제목',
           '<span class="k">기도</span> 탭에 선생님 기도제목이 <b>바로 보여요</b>. 내 이름을 누르면 내 기도제목을 적고 고칠 수 있어요(관리자 PIN 필요 없음). 다른 반은 보기만 돼요.') +
       '</div>' +
@@ -2942,12 +2948,12 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       ? '이번 주 순복이는 <b>' + esc(sbChildName(e)) + '</b>' +
         (cls ? ' <span class="sbt-cls">(' + esc(className(cls)) + ')</span>' : '') + '와 한 주 동안 함께 지내요'
       : '이번 주 순복이는 <b class="sbt-none">아직 기록 전</b>이에요';
-    return '<button type="button" class="sb-take" data-action="soonboki-open" data-week="' + wk + '" aria-label="이번 주 순복이와 지난 기록 보기">' +
+    return '<button type="button" class="sb-take" data-action="soonboki-open" data-week="' + wk + '" aria-label="이번 주 순복이 보기 · 누가 가져갔는지 고르기">' +
         '<img class="sbt-img" src="assets/soonbok-wave.png" alt="순복이">' +
         '<span class="sbt-tx">' +
           '<span class="sbt-k">🐑 이번 주 순복이</span>' +
           '<span class="sbt-main">' + line + '</span>' +
-          '<span class="sbt-sub">' + fmtMD(wk) + ' (' + WD[parseISO(wk).getDay()] + ') · 누가 가져갔는지 보기 ›</span>' +
+          '<span class="sbt-sub">' + fmtMD(wk) + ' (' + WD[parseISO(wk).getDay()] + ') · 눌러서 보기 · 누가 가져갔는지 고르기 ›</span>' +
         '</span>' +
       '</button>';
   }
@@ -3015,7 +3021,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           '<img src="assets/soonbok-wave.png" alt="순복이">' +
           '<span class="sh-tx"><span class="sh-k">🐑 ' + (isThis ? '이번 주' : sbWeekLabel(wk) + ' 주') + '</span>' +
             '<span class="sh-main">아직 기록 전이에요</span>' +
-            '<span class="sh-sub">' + (t ? (isThis ? '이번 주' : '그 주일') + ' 한 주 동안 순복이와 함께 지낼 친구를 골라 주세요' : '반에 입장하면 누가 가져갔는지 고를 수 있어요') + '</span>' +
+            '<span class="sh-sub">' + (isThis ? '이번 주' : '그 주일') + ' 한 주 동안 순복이와 함께 지낼 친구를 눌러 골라 주세요</span>' +
           '</span>' +
         '</div>';
 
@@ -3029,19 +3035,18 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         '<button type="button" class="sb-del" data-action="sb-del" data-week="' + wk + '">' + (isThis ? '이번 주' : sbWeekLabel(wk) + ' 주') + ' 기록 지우기</button>';
     }
 
-    // 고르기 — 반에 입장한 선생님(자기 반) · 관리자(모든 반)
+    // 고르기 — 반에 입장한 선생님(자기 반) · 관리자(모든 반) · v2.3 로그인 화면(모든 반)
     var picker = '';
-    if (!t) {
-      picker = '<div class="sb-note">🍎 선생님은 <b>반에 입장한 뒤</b> 출석 화면의 순복이 카드에서 누가 가져갔는지 고를 수 있어요. 여기서는 지난 기록만 볼 수 있어요.</div>';
-    } else if (!editable) {
+    if (!editable) {
       picker = '<div class="sb-note">🔒 ' + esc(className(cls)) + ' 기록이에요. 다른 반 기록은 그 반 선생님이나 관리자만 바꿀 수 있어요.</div>';
     } else {
-      var list = t.role === 'admin' ? data.classes : data.classes.filter(function (c) { return c.id === t.classId; });
+      var all = sbAllClasses(t);
+      var list = all ? data.classes : data.classes.filter(function (c) { return c.id === t.classId; });
       var grid = '';
       list.forEach(function (c) {
         var kids = kidsOf(c.id);
         if (!kids.length) return;
-        if (t.role === 'admin' && list.length > 1) {
+        if (all && list.length > 1) {
           grid += '<div class="sb-grp" style="color:' + classMeta(c.id).color + '"><i></i>' + esc(c.name) + '</div>';
         }
         grid += '<div class="sb-grid">' + kids.map(function (k) {
@@ -3049,12 +3054,12 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
           return '<button type="button" class="sb-kid' + (on ? ' on' : '') + '" data-action="sb-pick" data-child="' + k.id + '" data-week="' + wk + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
             '<span class="av">' + (k.photo ? '<img src="' + esc(k.photo) + '" alt="">' : esc(k.name.charAt(0))) + '</span>' +
             '<span class="nm">' + esc(k.name) + '</span>' +
-            (t.role === 'admin' ? '<span class="cl">' + esc(c.name.replace('반', '')) + '</span>' : '') +
+            (all ? '<span class="cl">' + esc(c.name.replace('반', '')) + '</span>' : '') +
           '</button>';
         }).join('') + '</div>';
       });
       picker = '<div class="sb-pick-h"><span>' + (isThis ? '이번 주' : sbWeekLabel(wk) + ' 주') + '는 누가 가져갔나요?</span><small>한 번 누르면 바로 저장돼요</small></div>' +
-        (grid || '<div class="empty" style="padding:14px">이 반에는 아직 등록된 친구가 없어요.</div>');
+        (grid || '<div class="empty" style="padding:14px">아직 등록된 친구가 없어요.</div>');
     }
 
     // 지난 기록 — 최근 주일부터
@@ -3088,17 +3093,17 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
     }
     hist += '</div>';
 
-    var tabBar = !t ? '' : '<div class="sb-tabs">' +
+    var tabBar = '<div class="sb-tabs">' +
       '<button type="button" class="' + (sbTab === 'hist' ? 'on' : '') + '" data-action="sb-tab" data-tab="hist">📋 전체 기록 <b>' + weeks.length + '</b></button>' +
       '<button type="button" class="' + (sbTab === 'pick' ? 'on' : '') + '" data-action="sb-tab" data-tab="pick">🐑 이번 주 고르기</button>' +
     '</div>';
 
     var bodyHtml;
-    if (sbTab === 'pick' && t) {
+    if (sbTab === 'pick') {
       bodyHtml = memoForm + picker;
     } else {
-      bodyHtml = hist + (t ? '' : '<div class="sb-note">🍎 선생님은 <b>반에 입장한 뒤</b> 출석 화면의 순복이 카드에서 누가 가져갔는지 고를 수 있어요.</div>');
-      if (t && editable) {
+      bodyHtml = hist;
+      if (editable) {
         bodyHtml += '<button type="button" class="add-btn sb-pickbtn" data-action="sb-tab" data-tab="pick">🐑 ' + (isThis ? '이번 주' : sbWeekLabel(wk) + ' 주') + ' 순복이 고르기</button>';
       }
     }
@@ -3113,12 +3118,13 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
   function sbPick(childId, week) {
     var t = currentTeacher();
     var c = childById(childId);
-    if (!t || !c) return;
-    if (!canEdit(t, c.classId)) { toast('다른 반 친구는 그 반 선생님만 고를 수 있어요.'); return; }
+    if (!c) return;
+    if (t && !canEdit(t, c.classId)) { toast('다른 반 친구는 그 반 선생님만 고를 수 있어요.'); return; }
     var wk = sbWeekOf(week);
     sbSet(wk, c.id);
     save();
-    openSoonboki(wk);
+    render();
+    openSoonboki(wk, sbTab);
     toast(c.name + ' 친구가 ' + (wk === sbThisWeek() ? '이번 주' : sbWeekLabel(wk) + ' 주') + ' 한 주 동안 순복이와 함께 지내요 🐑');
   }
 
@@ -3134,7 +3140,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
         sbRemove(wk);
         save();
         render();
-        openSoonboki(wk);
+        openSoonboki(wk, sbTab);   // 지운 뒤에도 보던 탭을 유지한다
         toast('순복이 기록을 지웠어요');
       });
   }
@@ -6521,6 +6527,7 @@ textarea.input{height:auto;min-height:62px;padding:11px 12px;resize:vertical;lin
       var mWeek = sbViewWeek || sbWeekOf(ui.date);
       if (mEl && sbMemo(mWeek, mEl.value)) {
         save();
+        render();
         openSoonboki(mWeek, sbTab);
         toast('메모를 저장했어요');
       }
